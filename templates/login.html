@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}Sign In — Resume IQ{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+{% endblock %}
+
+{% block body %}
+<div class="auth-wrapper">
+    <div class="auth-bg">
+        <div class="auth-glow-1"></div>
+        <div class="auth-glow-2"></div>
+    </div>
+
+    <div class="auth-card">
+        <div class="text-center">
+            <a href="/" class="auth-logo">
+                <div class="logo-icon"><i class="bi bi-cpu-fill"></i></div>
+                <span class="logo-text">Resume<span class="text-gradient">IQ</span></span>
+            </a>
+            <h2 class="auth-title">Welcome Back</h2>
+            <p class="auth-subtitle">Sign in to access your resumes, job matches, and roadmaps</p>
+        </div>
+
+        <div id="authAlert" class="auth-alert auth-alert-danger d-none">
+            <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+            <span id="authAlertMsg">Invalid email or password</span>
+        </div>
+
+        <form id="loginForm" autocomplete="on">
+            <div class="mb-3">
+                <label class="form-label" for="loginEmail">Email Address</label>
+                <div class="auth-input-group">
+                    <i class="bi bi-envelope auth-input-icon"></i>
+                    <input type="email" id="loginEmail" class="form-control auth-input" placeholder="name@example.com" required autofocus autocomplete="email">
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <label class="form-label mb-0" for="loginPassword">Password</label>
+                    <a href="/forgot-password" class="small text-muted hover-underline">Forgot password?</a>
+                </div>
+                <div class="auth-input-group">
+                    <i class="bi bi-lock auth-input-icon"></i>
+                    <input type="password" id="loginPassword" class="form-control auth-input" placeholder="••••••••" required autocomplete="current-password">
+                    <button type="button" class="password-toggle-btn" id="togglePasswordBtn" title="Toggle password visibility">
+                        <i class="bi bi-eye" id="togglePasswordIcon"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="d-flex align-items-center justify-content-between mb-4">
+                <div class="form-check">
+                    <input class="form-check-input auth-checkbox" type="checkbox" id="rememberMe">
+                    <label class="form-check-label text-secondary small ms-1" for="rememberMe">
+                        Remember me for 7 days
+                    </label>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 py-2 fw-600" id="loginSubmitBtn">
+                <span class="submit-text">Sign In</span>
+                <span class="spinner-border spinner-border-sm ms-2 d-none" id="loginSpinner" role="status"></span>
+            </button>
+        </form>
+
+        <div class="auth-footer">
+            Don't have an account? 
+            <a href="/register" class="fw-600 text-cyan ms-1">Create Account</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const loginForm = document.getElementById('loginForm');
+    const alertBox = document.getElementById('authAlert');
+    const alertMsg = document.getElementById('authAlertMsg');
+    const submitBtn = document.getElementById('loginSubmitBtn');
+    const submitText = submitBtn.querySelector('.submit-text');
+    const spinner = document.getElementById('loginSpinner');
+    const toggleBtn = document.getElementById('togglePasswordBtn');
+    const passwordInput = document.getElementById('loginPassword');
+    const toggleIcon = document.getElementById('togglePasswordIcon');
+
+    // Password visibility toggle
+    toggleBtn.addEventListener('click', () => {
+        const isPassword = passwordInput.getAttribute('type') === 'password';
+        passwordInput.setAttribute('type', isPassword ? 'text' : 'password');
+        toggleIcon.className = isPassword ? 'bi bi-eye-slash' : 'bi bi-eye';
+    });
+
+    // Form submission
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        alertBox.classList.add('d-none');
+
+        const email = document.getElementById('loginEmail').value.trim();
+        const password = passwordInput.value;
+        const rememberMe = document.getElementById('rememberMe').checked;
+
+        if (!email || !password) {
+            showAlert('Please fill in both email and password.');
+            return;
+        }
+
+        submitBtn.disabled = true;
+        submitText.textContent = 'Signing in...';
+        spinner.classList.remove('d-none');
+
+        try {
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password, remember_me: rememberMe })
+            });
+            const data = await res.json();
+
+            if (!res.ok) {
+                showAlert(data.error || 'Login failed. Please check your credentials.');
+                submitBtn.disabled = false;
+                submitText.textContent = 'Sign In';
+                spinner.classList.add('d-none');
+                return;
+            }
+
+            // Sync active resume cache if any
+            if (window.ResumeIQ) {
+                await ResumeIQ.syncActiveResume();
+            }
+
+            // Redirect to destination or dashboard
+            const urlParams = new URLSearchParams(window.location.search);
+            const nextUrl = urlParams.get('next') || data.redirect || '/dashboard';
+            window.location.href = nextUrl;
+
+        } catch (err) {
+            showAlert('Network error occurred. Please try again.');
+            submitBtn.disabled = false;
+            submitText.textContent = 'Sign In';
+            spinner.classList.add('d-none');
+        }
+    });
+
+    function showAlert(msg) {
+        alertMsg.textContent = msg;
+        alertBox.classList.remove('d-none');
+    }
+});
+</script>
+{% endblock %}

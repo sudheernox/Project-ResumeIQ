@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% block title %}Skill Gap Analysis — Resume IQ{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">{% endblock %}
+
+{% block body %}
+<div class="app-layout">
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <a href="/" class="d-flex align-items-center gap-2 text-decoration-none">
+                <div class="logo-icon small"><i class="bi bi-cpu-fill"></i></div>
+                <span class="logo-text">Resume<span class="text-gradient">IQ</span></span>
+            </a>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section-label">Main Menu</div>
+            <a href="/dashboard" class="sidebar-link"><i class="bi bi-grid-1x2"></i><span>Dashboard</span></a>
+            <a href="/analysis" class="sidebar-link"><i class="bi bi-file-earmark-text"></i><span>Resume Analysis</span></a>
+            <a href="/job-match" class="sidebar-link"><i class="bi bi-bullseye"></i><span>Job Match</span></a>
+            <a href="/skill-gap" class="sidebar-link active"><i class="bi bi-radar"></i><span>Skill Gap</span></a>
+            <a href="/roadmap" class="sidebar-link"><i class="bi bi-map"></i><span>Learning Roadmap</span></a>
+            <a href="/comparison" class="sidebar-link"><i class="bi bi-bar-chart-steps"></i><span>Job Comparison</span></a>
+            <div class="nav-section-label mt-3">Account</div>
+            <a href="/profile" class="sidebar-link"><i class="bi bi-person-circle"></i><span>User Profile</span></a>
+        </nav>
+        <div class="sidebar-footer">
+            <a href="/analysis" class="btn btn-primary w-100"><i class="bi bi-plus-circle me-2"></i>New Analysis</a>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div class="topbar">
+            <div class="d-flex align-items-center gap-3">
+                <button class="btn btn-icon" id="sidebarToggle"><i class="bi bi-list"></i></button>
+                <div>
+                    <h4 class="mb-0 fw-700">Skill Gap Analysis</h4>
+                    <p class="mb-0 text-secondary small">Discover what skills you need to acquire for your target role</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page-body">
+            <div id="noResumeAlert" class="alert alert-warning d-none">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                No resume found. <a href="/analysis" class="alert-link">Upload and analyze your resume first.</a>
+            </div>
+
+            <!-- Active Resume Header -->
+            <div id="gapActiveResumeHeader" class="active-resume-banner mb-4" style="display:none;">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-file-earmark-person-fill text-cyan fs-4"></i>
+                    <div>
+                        <div class="text-white fw-700" id="gapResumeFileName">—</div>
+                        <div class="text-secondary small">Active Resume analyzed for skill gaps</div>
+                    </div>
+                </div>
+                <a href="/analysis" class="btn btn-outline-primary btn-sm px-3">
+                    <i class="bi bi-arrow-left-right me-1"></i>Switch Resume
+                </a>
+            </div>
+
+            <!-- Role selector -->
+            <div class="list-card mb-4">
+                <div class="row align-items-end g-3">
+                    <div class="col-lg-5">
+                        <label class="form-label text-secondary small">Select Career Role</label>
+                        <select class="form-select form-select-dark" id="gapRoleSelect">
+                            <option>Software Developer</option>
+                            <option>Web Developer</option>
+                            <option>Data Analyst</option>
+                            <option>Machine Learning Engineer</option>
+                            <option>QA Engineer</option>
+                        </select>
+                    </div>
+                    <div class="col-lg-5">
+                        <label class="form-label text-secondary small">Or paste custom Job Description</label>
+                        <input type="text" class="form-control form-control-dark" id="gapCustomJd"
+                            placeholder="Optional: paste skills/JD for custom analysis">
+                    </div>
+                    <div class="col-lg-2">
+                        <button class="btn btn-primary w-100" id="gapAnalyzeBtn">
+                            <i class="bi bi-radar me-1"></i> Analyze
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading -->
+            <div id="gapLoading" class="text-center py-4" style="display:none">
+                <div class="analysis-loading-ring"></div>
+                <p class="mt-3 text-secondary">Analyzing skill gap...</p>
+            </div>
+
+            <!-- Results -->
+            <div id="gapResults" style="display:none">
+                <div class="row g-4 mb-4">
+                    <!-- Coverage Score -->
+                    <div class="col-lg-3">
+                        <div class="big-score-card">
+                            <div class="big-score-label">Skills Coverage</div>
+                            <div class="big-score-ring">
+                                <svg viewBox="0 0 120 120" id="gapRingSvg">
+                                    <circle cx="60" cy="60" r="52" fill="none" stroke="#1e293b" stroke-width="10"/>
+                                    <circle cx="60" cy="60" r="52" fill="none" stroke="url(#gapGrad)" stroke-width="10"
+                                        stroke-dasharray="0 326.7" stroke-linecap="round" transform="rotate(-90 60 60)"
+                                        id="gapRingCircle"/>
+                                    <defs>
+                                        <linearGradient id="gapGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                            <stop offset="0%" style="stop-color:#8b5cf6"/>
+                                            <stop offset="100%" style="stop-color:#22d3ee"/>
+                                        </linearGradient>
+                                    </defs>
+                                </svg>
+                                <div class="big-score-num" id="gapScoreNum">—</div>
+                            </div>
+                            <div class="big-score-role" id="gapRoleLabel">—</div>
+                            <div class="mt-3 text-secondary small text-center">
+                                <span id="gapMissingCount">—</span> skills to develop
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Radar Chart -->
+                    <div class="col-lg-9">
+                        <div class="chart-card h-100">
+                            <div class="chart-card-header">
+                                <h6><i class="bi bi-radar me-2 text-purple"></i>My Skills vs. Required Skills</h6>
+                            </div>
+                            <div class="chart-container" style="max-height:320px">
+                                <canvas id="skillGapRadar"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Category Analysis -->
+                <div class="list-card mb-4">
+                    <h6 class="mb-3"><i class="bi bi-grid me-2 text-cyan"></i>Category Breakdown</h6>
+                    <div id="categoryBreakdown"></div>
+                </div>
+
+                <!-- Missing Skills -->
+                <div class="row g-4 mb-4">
+                    <div class="col-lg-4">
+                        <div class="list-card red-border">
+                            <h6 class="mb-3"><i class="bi bi-x-circle-fill text-danger me-2"></i>Missing Technical Skills</h6>
+                            <div class="skills-wrap" id="gap-missing-tech"></div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="list-card orange-border">
+                            <h6 class="mb-3"><i class="bi bi-arrow-up-circle-fill text-warning me-2"></i>Skills to Improve</h6>
+                            <div class="skills-wrap" id="gap-improve"></div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="list-card green-border">
+                            <h6 class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>You Already Have</h6>
+                            <div class="skills-wrap" id="gap-existing"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Priority Skills -->
+                <div class="list-card mb-4">
+                    <h6 class="mb-3"><i class="bi bi-lightning-charge-fill text-warning me-2"></i>Priority Skills to Learn First</h6>
+                    <div id="prioritySkills" class="d-flex flex-wrap gap-2"></div>
+                    <p class="text-secondary small mt-2">These skills appear most frequently in the role requirements — learn them first.</p>
+                </div>
+
+                <!-- CTA -->
+                <div class="quick-actions-row">
+                    <h6 class="mb-3 text-secondary">Ready to close your skill gaps?</h6>
+                    <div class="d-flex flex-wrap gap-3">
+                        <a href="/roadmap" class="btn btn-primary"><i class="bi bi-map me-2"></i>Generate Learning Roadmap</a>
+                        <a href="/comparison" class="quick-action-btn"><i class="bi bi-bar-chart-steps"></i> Compare All Roles</a>
+                        <a href="/job-match" class="quick-action-btn"><i class="bi bi-bullseye"></i> Match to a Specific Job</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script>
+    document.getElementById('sidebarToggle')?.addEventListener('click', () => {
+        document.getElementById('sidebar').classList.toggle('collapsed');
+    });
+    document.addEventListener('DOMContentLoaded', () => {
+        initSkillGapPage();
+    });
+</script>
+{% endblock %}

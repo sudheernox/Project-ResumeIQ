@@ -1,0 +1,362 @@
+{% extends "base.html" %}
+{% block title %}Resume Analysis — Resume IQ{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
+
+{% block body %}
+<div class="app-layout">
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <a href="/" class="d-flex align-items-center gap-2 text-decoration-none">
+                <div class="logo-icon small"><i class="bi bi-cpu-fill"></i></div>
+                <span class="logo-text">Resume<span class="text-gradient">IQ</span></span>
+            </a>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section-label">Main Menu</div>
+            <a href="/dashboard" class="sidebar-link"><i class="bi bi-grid-1x2"></i><span>Dashboard</span></a>
+            <a href="/analysis" class="sidebar-link active"><i class="bi bi-file-earmark-text"></i><span>Resume Analysis</span></a>
+            <a href="/job-match" class="sidebar-link"><i class="bi bi-bullseye"></i><span>Job Match</span></a>
+            <a href="/skill-gap" class="sidebar-link"><i class="bi bi-radar"></i><span>Skill Gap</span></a>
+            <a href="/roadmap" class="sidebar-link"><i class="bi bi-map"></i><span>Learning Roadmap</span></a>
+            <a href="/comparison" class="sidebar-link"><i class="bi bi-bar-chart-steps"></i><span>Job Comparison</span></a>
+            <div class="nav-section-label mt-3">Account</div>
+            <a href="/profile" class="sidebar-link"><i class="bi bi-person-circle"></i><span>User Profile</span></a>
+        </nav>
+        <div class="sidebar-footer">
+            <a href="/analysis" class="btn btn-primary w-100"><i class="bi bi-plus-circle me-2"></i>New Analysis</a>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div class="topbar">
+            <div class="d-flex align-items-center gap-3">
+                <button class="btn btn-icon" id="sidebarToggle"><i class="bi bi-list"></i></button>
+                <div>
+                    <h4 class="mb-0 fw-700">Resume Analysis</h4>
+                    <p class="mb-0 text-secondary small">Upload and analyze your resume with AI</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="page-body">
+
+            <!-- Active Resume Banner (shown when a resume is active) -->
+            <div id="activeResumeBanner" class="active-resume-banner mb-4" style="display:none;">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="logo-icon small" style="width:42px;height:42px;font-size:1.3rem;">
+                        <i class="bi bi-file-earmark-check-fill text-white"></i>
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2">
+                            <h5 class="mb-0 text-white fw-700" id="bannerFileName">—</h5>
+                            <span class="badge bg-success" id="bannerStatusBadge">Active & Analyzed</span>
+                        </div>
+                        <div class="text-secondary small mt-1">
+                            <span id="bannerUploadTime">—</span> &bull; 
+                            <span id="bannerFileSize">—</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-outline-primary btn-sm px-3" id="bannerReanalyzeBtn">
+                        <i class="bi bi-arrow-repeat me-1"></i>Re-Analyze
+                    </button>
+                    <button class="btn btn-outline-light btn-sm px-3" id="toggleUploadBtn">
+                        <i class="bi bi-cloud-upload me-1"></i>Upload New
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm px-3" id="bannerDeleteBtn">
+                        <i class="bi bi-trash me-1"></i>Delete
+                    </button>
+                </div>
+            </div>
+
+            <!-- ── Upload Section ── -->
+            <div class="row g-4 mb-4" id="uploadSection">
+                <div class="col-lg-6">
+                    <div class="upload-card">
+                        <h5 class="mb-1">Upload Your Resume</h5>
+                        <p class="text-secondary small mb-4">Supports PDF and DOCX — Max 10MB</p>
+
+                        <div class="drop-zone" id="dropZone">
+                            <div class="drop-zone-content">
+                                <div class="drop-icon">
+                                    <i class="bi bi-cloud-upload"></i>
+                                </div>
+                                <h5>Drag & Drop Resume Here</h5>
+                                <p class="text-secondary">or</p>
+                                <label for="fileInput" class="btn btn-primary">Browse File</label>
+                                <input type="file" id="fileInput" accept=".pdf,.docx" style="display:none">
+                            </div>
+                            <div class="drop-zone-hover-text">
+                                <i class="bi bi-file-earmark-arrow-down display-4 text-primary"></i>
+                                <p class="mt-2">Release to upload</p>
+                            </div>
+                        </div>
+
+                        <!-- Upload progress -->
+                        <div id="uploadProgress" class="upload-progress mt-3" style="display:none">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-white small" id="uploadFileName">Uploading...</span>
+                                <span class="text-primary small" id="uploadPct">0%</span>
+                            </div>
+                            <div class="progress" style="height:6px">
+                                <div class="progress-bar bg-primary" id="uploadBar" style="width:0%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Upload success -->
+                        <div id="uploadSuccess" class="alert alert-success mt-3" style="display:none">
+                            <i class="bi bi-check-circle me-2"></i>
+                            <span id="uploadSuccessMsg">Resume uploaded successfully!</span>
+                        </div>
+
+                        <div id="uploadError" class="alert alert-danger mt-3" style="display:none">
+                            <i class="bi bi-exclamation-circle me-2"></i>
+                            <span id="uploadErrorMsg"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="upload-tips-card h-100">
+                        <h6 class="mb-3"><i class="bi bi-lightbulb text-warning me-2"></i>Tips for Best Results</h6>
+                        <ul class="tips-list">
+                            <li><i class="bi bi-check-circle-fill text-success"></i> Use a text-based PDF (not scanned image)</li>
+                            <li><i class="bi bi-check-circle-fill text-success"></i> Include a Skills section with specific technologies</li>
+                            <li><i class="bi bi-check-circle-fill text-success"></i> Add project descriptions with technologies used</li>
+                            <li><i class="bi bi-check-circle-fill text-success"></i> List education with degree name and college</li>
+                            <li><i class="bi bi-check-circle-fill text-success"></i> Include LinkedIn and GitHub profile links</li>
+                            <li><i class="bi bi-check-circle-fill text-success"></i> Use action verbs in experience bullet points</li>
+                        </ul>
+
+                        <div class="mt-4">
+                            <h6 class="mb-2 text-secondary small">Supported Formats</h6>
+                            <div class="d-flex gap-2">
+                                <span class="format-badge"><i class="bi bi-file-earmark-pdf text-danger me-1"></i>PDF</span>
+                                <span class="format-badge"><i class="bi bi-file-earmark-word text-info me-1"></i>DOCX</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analyze button -->
+            <div class="text-center mb-5" id="analyzeSection" style="display:none">
+                <button class="btn btn-primary btn-lg px-6 py-3" id="analyzeBtn">
+                    <i class="bi bi-cpu me-2"></i>Run AI Analysis
+                </button>
+                <p class="text-secondary small mt-2">This may take a few seconds</p>
+            </div>
+
+            <!-- Loading -->
+            <div id="analysisLoading" class="text-center py-5" style="display:none">
+                <div class="analysis-loading-ring"></div>
+                <h5 class="mt-4 text-white">Analyzing your resume...</h5>
+                <p class="text-secondary" id="loadingStatus">Extracting skills and experience...</p>
+            </div>
+
+            <!-- ══ RESULTS ══ -->
+            <div id="analysisResults" style="display:none">
+
+                <!-- Score Cards -->
+                <div class="results-header mb-4">
+                    <h5 class="text-white mb-1" id="resumeOwnerName">Analysis Results</h5>
+                    <p class="text-secondary small">AI-powered resume quality assessment</p>
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-6 col-lg-2">
+                        <div class="score-mini-card" style="--c:#6366f1">
+                            <div class="score-mini-label">Overall</div>
+                            <div class="score-mini-val" id="r-overall">—</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-lg-2">
+                        <div class="score-mini-card" style="--c:#8b5cf6">
+                            <div class="score-mini-label">Skills</div>
+                            <div class="score-mini-val" id="r-skills">—</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-lg-2">
+                        <div class="score-mini-card" style="--c:#06b6d4">
+                            <div class="score-mini-label">Experience</div>
+                            <div class="score-mini-val" id="r-exp">—</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-lg-2">
+                        <div class="score-mini-card" style="--c:#10b981">
+                            <div class="score-mini-label">Keywords</div>
+                            <div class="score-mini-val" id="r-kw">—</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-lg-2">
+                        <div class="score-mini-card" style="--c:#f59e0b">
+                            <div class="score-mini-label">ATS</div>
+                            <div class="score-mini-val" id="r-ats">—</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-lg-2">
+                        <div class="score-mini-card" style="--c:#ef4444">
+                            <div class="score-mini-label">Formatting</div>
+                            <div class="score-mini-val" id="r-fmt">—</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-4 mb-4">
+                    <!-- Radar Chart -->
+                    <div class="col-lg-5">
+                        <div class="chart-card h-100">
+                            <div class="chart-card-header">
+                                <h6><i class="bi bi-pie-chart me-2 text-primary"></i>Score Overview</h6>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="analysisRadarChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Technical Skills -->
+                    <div class="col-lg-7">
+                        <div class="skills-card h-100">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="mb-0"><i class="bi bi-code-slash me-2 text-cyan"></i>Identified Skills</h6>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-secondary active" id="aShowTech">Technical</button>
+                                    <button class="btn btn-outline-secondary" id="aShowSoft">Soft</button>
+                                </div>
+                            </div>
+                            <div id="aTechWrap"><div class="skills-wrap" id="aSkillsContainer"></div></div>
+                            <div id="aSoftWrap" style="display:none"><div class="skills-wrap" id="aSoftContainer"></div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Strengths, Weaknesses, Recommendations -->
+                <div class="row g-4 mb-4">
+                    <div class="col-lg-4">
+                        <div class="list-card green-border">
+                            <h6 class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Strengths</h6>
+                            <ul class="insight-list" id="aStrengths"></ul>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="list-card red-border">
+                            <h6 class="mb-3"><i class="bi bi-x-circle-fill text-danger me-2"></i>Weaknesses</h6>
+                            <ul class="insight-list" id="aWeaknesses"></ul>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="list-card orange-border">
+                            <h6 class="mb-3"><i class="bi bi-lightbulb-fill text-warning me-2"></i>Recommendations</h6>
+                            <ul class="insight-list" id="aRecs"></ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Education, Experience, Projects -->
+                <div class="row g-4 mb-4">
+                    <div class="col-lg-4">
+                        <div class="list-card">
+                            <h6 class="mb-3"><i class="bi bi-mortarboard me-2 text-primary"></i>Education</h6>
+                            <div id="aEducation" class="text-secondary small">—</div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="list-card">
+                            <h6 class="mb-3"><i class="bi bi-briefcase me-2 text-purple"></i>Experience</h6>
+                            <div id="aExperience" class="text-secondary small">—</div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="list-card">
+                            <h6 class="mb-3"><i class="bi bi-kanban me-2 text-cyan"></i>Projects</h6>
+                            <div id="aProjects" class="text-secondary small">—</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Insights -->
+                <div class="insight-card mb-4">
+                    <div class="insight-header">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="insight-icon"><i class="bi bi-cpu"></i></div>
+                            <h6 class="mb-0">AI Career Insights</h6>
+                        </div>
+                    </div>
+                    <div class="insight-body row g-3" id="aInsightsBody">
+                        <div class="col-lg-3">
+                            <div class="insight-item h-100">
+                                <div class="ins-label">Summary</div>
+                                <div class="ins-text" id="ai-summary">—</div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3">
+                            <div class="insight-item h-100">
+                                <div class="ins-label"><i class="bi bi-lightning-charge text-warning me-1"></i>Top Insight</div>
+                                <div class="ins-text" id="ai-top">—</div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3">
+                            <div class="insight-item h-100">
+                                <div class="ins-label"><i class="bi bi-check-circle text-success me-1"></i>Strength</div>
+                                <div class="ins-text" id="ai-strength">—</div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3">
+                            <div class="insight-item h-100">
+                                <div class="ins-label"><i class="bi bi-exclamation-circle text-warning me-1"></i>Critical Gap</div>
+                                <div class="ins-text" id="ai-gap">—</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Next Steps -->
+                <div class="quick-actions-row">
+                    <h6 class="mb-3 text-secondary">Next Steps</h6>
+                    <div class="d-flex flex-wrap gap-3">
+                        <a href="/job-match" class="quick-action-btn"><i class="bi bi-bullseye"></i> Match to a Job</a>
+                        <a href="/skill-gap" class="quick-action-btn"><i class="bi bi-radar"></i> Skill Gap Analysis</a>
+                        <a href="/roadmap" class="quick-action-btn"><i class="bi bi-map"></i> Learning Roadmap</a>
+                        <a href="/comparison" class="quick-action-btn"><i class="bi bi-bar-chart-steps"></i> Compare Jobs</a>
+                    </div>
+                </div>
+
+            </div><!-- end results -->
+        </div>
+    </main>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script>
+    document.getElementById('sidebarToggle')?.addEventListener('click', () => {
+        document.getElementById('sidebar').classList.toggle('collapsed');
+    });
+
+    // Skills tabs
+    document.getElementById('aShowTech')?.addEventListener('click', function() {
+        document.getElementById('aTechWrap').style.display = '';
+        document.getElementById('aSoftWrap').style.display = 'none';
+        this.classList.add('active');
+        document.getElementById('aShowSoft').classList.remove('active');
+    });
+    document.getElementById('aShowSoft')?.addEventListener('click', function() {
+        document.getElementById('aSoftWrap').style.display = '';
+        document.getElementById('aTechWrap').style.display = 'none';
+        this.classList.add('active');
+        document.getElementById('aShowTech').classList.remove('active');
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        initAnalysisPage();
+    });
+</script>
+{% endblock %}

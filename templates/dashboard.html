@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Resume IQ{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
+
+{% block body %}
+<div class="app-layout">
+
+    <!-- ═══ SIDEBAR ═══ -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <a href="/" class="d-flex align-items-center gap-2 text-decoration-none">
+                <div class="logo-icon small"><i class="bi bi-cpu-fill"></i></div>
+                <span class="logo-text">Resume<span class="text-gradient">IQ</span></span>
+            </a>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="nav-section-label">Main Menu</div>
+            <a href="/dashboard" class="sidebar-link active" data-page="dashboard">
+                <i class="bi bi-grid-1x2"></i><span>Dashboard</span>
+            </a>
+            <a href="/analysis" class="sidebar-link" data-page="analysis">
+                <i class="bi bi-file-earmark-text"></i><span>Resume Analysis</span>
+            </a>
+            <a href="/job-match" class="sidebar-link" data-page="job-match">
+                <i class="bi bi-bullseye"></i><span>Job Match</span>
+            </a>
+            <a href="/skill-gap" class="sidebar-link" data-page="skill-gap">
+                <i class="bi bi-radar"></i><span>Skill Gap</span>
+            </a>
+            <a href="/roadmap" class="sidebar-link" data-page="roadmap">
+                <i class="bi bi-map"></i><span>Learning Roadmap</span>
+            </a>
+            <a href="/comparison" class="sidebar-link" data-page="comparison">
+                <i class="bi bi-bar-chart-steps"></i><span>Job Comparison</span>
+            </a>
+
+            <div class="nav-section-label mt-3">Account</div>
+            <a href="/profile" class="sidebar-link">
+                <i class="bi bi-person-circle"></i><span>User Profile</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <a href="/analysis" class="btn btn-primary w-100">
+                <i class="bi bi-plus-circle me-2"></i>New Analysis
+            </a>
+        </div>
+    </aside>
+
+    <!-- ═══ MAIN CONTENT ═══ -->
+    <main class="main-content">
+        <!-- Top bar -->
+        <div class="topbar">
+            <div class="d-flex align-items-center gap-3">
+                <button class="btn btn-icon sidebar-toggle" id="sidebarToggle">
+                    <i class="bi bi-list"></i>
+                </button>
+                <div>
+                    <h4 class="mb-0 fw-700">Dashboard</h4>
+                    <p class="mb-0 text-secondary small">Your AI-powered career insights</p>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <div class="topbar-stat" id="topbar-score">
+                    <i class="bi bi-star-fill text-warning me-1"></i>
+                    <span id="topbar-score-val">—</span>
+                </div>
+                <a href="/analysis" class="btn btn-primary btn-sm px-4">
+                    <i class="bi bi-cloud-upload me-1"></i>Upload Resume
+                </a>
+            </div>
+        </div>
+
+        <!-- Page content -->
+        <div class="page-body" id="dashboardContent">
+
+            <!-- Empty state -->
+            <div id="emptyState" class="empty-state-card text-center py-6" style="display:none">
+                <div class="empty-icon mb-4">
+                    <i class="bi bi-file-earmark-plus"></i>
+                </div>
+                <h4 class="text-white mb-2">No Resume Analyzed Yet</h4>
+                <p class="text-secondary mb-4">Upload your resume to get AI-powered insights, job match scores, and your personalized learning roadmap.</p>
+                <a href="/analysis" class="btn btn-primary btn-lg px-5">
+                    <i class="bi bi-cloud-upload me-2"></i>Upload & Analyze Resume
+                </a>
+            </div>
+
+            <!-- Dashboard content (hidden until data loaded) -->
+            <div id="dashboardData" style="display:none">
+
+                <!-- ── Summary Cards ── -->
+                <div class="row g-4 mb-4">
+                    <div class="col-xl-2 col-md-4 col-6">
+                        <div class="stat-card" style="--card-color:#6366f1">
+                            <div class="stat-card-icon"><i class="bi bi-star-fill"></i></div>
+                            <div class="stat-card-num" id="sc-overall">—</div>
+                            <div class="stat-card-label">Resume Score</div>
+                            <div class="stat-card-sub">out of 100</div>
+                        </div>
+                    </div>
+                    <div class="col-xl-2 col-md-4 col-6">
+                        <div class="stat-card" style="--card-color:#8b5cf6">
+                            <div class="stat-card-icon"><i class="bi bi-robot"></i></div>
+                            <div class="stat-card-num" id="sc-ats">—</div>
+                            <div class="stat-card-label">ATS Score</div>
+                            <div class="stat-card-sub">compatibility</div>
+                        </div>
+                    </div>
+                    <div class="col-xl-2 col-md-4 col-6">
+                        <div class="stat-card" style="--card-color:#06b6d4">
+                            <div class="stat-card-icon"><i class="bi bi-bullseye"></i></div>
+                            <div class="stat-card-num" id="sc-match">—</div>
+                            <div class="stat-card-label">Job Match</div>
+                            <div class="stat-card-sub">percentage</div>
+                        </div>
+                    </div>
+                    <div class="col-xl-2 col-md-4 col-6">
+                        <div class="stat-card" style="--card-color:#10b981">
+                            <div class="stat-card-icon"><i class="bi bi-code-slash"></i></div>
+                            <div class="stat-card-num" id="sc-skills">—</div>
+                            <div class="stat-card-label">Total Skills</div>
+                            <div class="stat-card-sub">identified</div>
+                        </div>
+                    </div>
+                    <div class="col-xl-2 col-md-4 col-6">
+                        <div class="stat-card" style="--card-color:#f59e0b">
+                            <div class="stat-card-icon"><i class="bi bi-exclamation-triangle"></i></div>
+                            <div class="stat-card-num" id="sc-missing">—</div>
+                            <div class="stat-card-label">Missing Skills</div>
+                            <div class="stat-card-sub">to develop</div>
+                        </div>
+                    </div>
+                    <div class="col-xl-2 col-md-4 col-6">
+                        <div class="stat-card" style="--card-color:#ef4444">
+                            <div class="stat-card-icon"><i class="bi bi-graph-up"></i></div>
+                            <div class="stat-card-num" id="sc-progress">—</div>
+                            <div class="stat-card-label">Roadmap</div>
+                            <div class="stat-card-sub">progress %</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Charts Row ── -->
+                <div class="row g-4 mb-4">
+                    <div class="col-lg-6">
+                        <div class="chart-card">
+                            <div class="chart-card-header">
+                                <h6><i class="bi bi-pie-chart me-2 text-primary"></i>Resume Analysis Overview</h6>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="overviewChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="chart-card">
+                            <div class="chart-card-header">
+                                <h6><i class="bi bi-bar-chart me-2 text-purple"></i>Score Breakdown</h6>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="breakdownChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── AI Insights + Skills ── -->
+                <div class="row g-4 mb-4">
+                    <div class="col-lg-5">
+                        <div class="insight-card">
+                            <div class="insight-header">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="insight-icon"><i class="bi bi-cpu"></i></div>
+                                    <h6 class="mb-0">AI Career Insights</h6>
+                                </div>
+                                <span class="badge bg-primary-soft text-primary" id="ai-badge">NLP Analysis</span>
+                            </div>
+                            <div class="insight-body" id="aiInsightsBody">
+                                <div class="insight-item" id="ins-summary">
+                                    <div class="ins-label">Summary</div>
+                                    <div class="ins-text">Loading insights...</div>
+                                </div>
+                                <div class="insight-item" id="ins-top">
+                                    <div class="ins-label"><i class="bi bi-lightning-charge text-warning me-1"></i>Top Insight</div>
+                                    <div class="ins-text">—</div>
+                                </div>
+                                <div class="insight-item" id="ins-strength">
+                                    <div class="ins-label"><i class="bi bi-check-circle text-success me-1"></i>Strength</div>
+                                    <div class="ins-text">—</div>
+                                </div>
+                                <div class="insight-item" id="ins-gap">
+                                    <div class="ins-label"><i class="bi bi-exclamation-circle text-warning me-1"></i>Critical Gap</div>
+                                    <div class="ins-text">—</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-7">
+                        <div class="skills-card">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="mb-0"><i class="bi bi-code-slash me-2 text-cyan"></i>Identified Skills</h6>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-secondary active" id="showTechSkills">Technical</button>
+                                    <button class="btn btn-outline-secondary" id="showSoftSkills">Soft</button>
+                                </div>
+                            </div>
+                            <div id="techSkillsWrap">
+                                <div class="skills-wrap" id="techSkills"></div>
+                            </div>
+                            <div id="softSkillsWrap" style="display:none">
+                                <div class="skills-wrap" id="softSkills"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Strengths & Recommendations ── -->
+                <div class="row g-4 mb-4">
+                    <div class="col-lg-6">
+                        <div class="list-card green-border">
+                            <h6 class="mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Resume Strengths</h6>
+                            <ul class="insight-list" id="strengthsList"></ul>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="list-card orange-border">
+                            <h6 class="mb-3"><i class="bi bi-lightbulb-fill text-warning me-2"></i>Recommendations</h6>
+                            <ul class="insight-list" id="recsList"></ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Quick Actions ── -->
+                <div class="quick-actions-row mb-4">
+                    <h6 class="mb-3 text-secondary">Quick Actions</h6>
+                    <div class="d-flex flex-wrap gap-3">
+                        <a href="/job-match" class="quick-action-btn">
+                            <i class="bi bi-bullseye"></i> Match to a Job
+                        </a>
+                        <a href="/skill-gap" class="quick-action-btn">
+                            <i class="bi bi-radar"></i> Analyze Skill Gap
+                        </a>
+                        <a href="/roadmap" class="quick-action-btn">
+                            <i class="bi bi-map"></i> Generate Roadmap
+                        </a>
+                        <a href="/comparison" class="quick-action-btn">
+                            <i class="bi bi-bar-chart-steps"></i> Compare Jobs
+                        </a>
+                        <a href="/analysis" class="quick-action-btn">
+                            <i class="bi bi-cloud-upload"></i> Upload New Resume
+                        </a>
+                    </div>
+                </div>
+
+            </div><!-- end dashboardData -->
+        </div><!-- end page-body -->
+    </main>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script>
+    // Sidebar toggle
+    document.getElementById('sidebarToggle')?.addEventListener('click', () => {
+        document.getElementById('sidebar').classList.toggle('collapsed');
+    });
+
+    // Skills tab toggle
+    document.getElementById('showTechSkills')?.addEventListener('click', function() {
+        document.getElementById('techSkillsWrap').style.display = '';
+        document.getElementById('softSkillsWrap').style.display = 'none';
+        this.classList.add('active');
+        document.getElementById('showSoftSkills').classList.remove('active');
+    });
+    document.getElementById('showSoftSkills')?.addEventListener('click', function() {
+        document.getElementById('softSkillsWrap').style.display = '';
+        document.getElementById('techSkillsWrap').style.display = 'none';
+        this.classList.add('active');
+        document.getElementById('showTechSkills').classList.remove('active');
+    });
+
+    // Load dashboard data
+    document.addEventListener('DOMContentLoaded', () => {
+        loadDashboard();
+    });
+</script>
+{% endblock %}

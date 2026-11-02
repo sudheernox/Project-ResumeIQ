@@ -1,0 +1,321 @@
+{% extends "base.html" %}
+{% block title %}User Profile — Resume IQ{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+{% endblock %}
+
+{% block body %}
+<div class="app-layout">
+
+    <!-- ═══ SIDEBAR ═══ -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <a href="/" class="d-flex align-items-center gap-2 text-decoration-none">
+                <div class="logo-icon small"><i class="bi bi-cpu-fill"></i></div>
+                <span class="logo-text">Resume<span class="text-gradient">IQ</span></span>
+            </a>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="nav-section-label">Main Menu</div>
+            <a href="/dashboard" class="sidebar-link">
+                <i class="bi bi-grid-1x2"></i><span>Dashboard</span>
+            </a>
+            <a href="/analysis" class="sidebar-link">
+                <i class="bi bi-file-earmark-text"></i><span>Resume Analysis</span>
+            </a>
+            <a href="/job-match" class="sidebar-link">
+                <i class="bi bi-bullseye"></i><span>Job Match</span>
+            </a>
+            <a href="/skill-gap" class="sidebar-link">
+                <i class="bi bi-radar"></i><span>Skill Gap</span>
+            </a>
+            <a href="/roadmap" class="sidebar-link">
+                <i class="bi bi-map"></i><span>Learning Roadmap</span>
+            </a>
+            <a href="/comparison" class="sidebar-link">
+                <i class="bi bi-bar-chart-steps"></i><span>Job Comparison</span>
+            </a>
+
+            <div class="nav-section-label mt-3">Account</div>
+            <a href="/profile" class="sidebar-link active">
+                <i class="bi bi-person-circle"></i><span>User Profile</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <a href="/logout" class="btn btn-outline-danger w-100">
+                <i class="bi bi-box-arrow-right me-2"></i>Sign Out
+            </a>
+        </div>
+    </aside>
+
+    <!-- ═══ MAIN CONTENT ═══ -->
+    <main class="main-content">
+        <!-- Top bar -->
+        <div class="topbar">
+            <div class="d-flex align-items-center gap-3">
+                <button class="btn btn-icon sidebar-toggle" id="sidebarToggle">
+                    <i class="bi bi-list"></i>
+                </button>
+                <div>
+                    <h4 class="mb-0 fw-700">User Profile</h4>
+                    <p class="mb-0 text-secondary small">Manage your account credentials and personal details</p>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <a href="/dashboard" class="btn btn-outline-primary btn-sm px-3">
+                    <i class="bi bi-grid-1x2 me-1"></i>Dashboard
+                </a>
+            </div>
+        </div>
+
+        <!-- Page body -->
+        <div class="page-body">
+            <div class="row g-4 mb-4">
+                <!-- User Overview Card -->
+                <div class="col-lg-4">
+                    <div class="profile-card text-center h-100 d-flex flex-column align-items-center justify-content-center py-5">
+                        <div class="user-avatar-lg mb-3">
+                            <span id="profileAvatarInitials">{{ current_user.full_name[:2].upper() if current_user else 'UQ' }}</span>
+                        </div>
+                        <h4 class="text-white fw-700 mb-1" id="profileDisplayName">{{ current_user.full_name if current_user else 'User' }}</h4>
+                        <p class="text-cyan mb-3 small" id="profileDisplayEmail">{{ current_user.email if current_user else '' }}</p>
+
+                        <div class="badge bg-primary-soft text-cyan px-3 py-2 rounded-pill mb-4">
+                            <i class="bi bi-shield-check me-1"></i>Verified Member
+                        </div>
+
+                        <div class="w-100 pt-3 border-top border-secondary border-opacity-25 d-flex justify-content-around text-center">
+                            <div>
+                                <span class="text-secondary small d-block">Account Status</span>
+                                <span class="text-success fw-600 small"><i class="bi bi-dot"></i>Active</span>
+                            </div>
+                            <div>
+                                <span class="text-secondary small d-block">Joined</span>
+                                <span class="text-white small" id="profileJoinedDate">{{ current_user.created_at.strftime('%b %Y') if current_user and current_user.created_at else 'Recent' }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Forms Column -->
+                <div class="col-lg-8">
+                    <!-- Alert Message Container -->
+                    <div id="profileAlert" class="auth-alert d-none mb-3">
+                        <i class="bi bi-info-circle-fill flex-shrink-0"></i>
+                        <span id="profileAlertMsg"></span>
+                    </div>
+
+                    <!-- Personal Information Form -->
+                    <div class="profile-card mb-4">
+                        <h5 class="text-white fw-700 mb-3 d-flex align-items-center gap-2">
+                            <i class="bi bi-person-lines-fill text-primary"></i> Personal Details
+                        </h5>
+                        <form id="updateNameForm">
+                            <div class="mb-3">
+                                <label class="form-label">Full Name</label>
+                                <div class="auth-input-group">
+                                    <i class="bi bi-person auth-input-icon"></i>
+                                    <input type="text" id="inputFullName" class="form-control auth-input" value="{{ current_user.full_name if current_user else '' }}" required>
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label">Email Address</label>
+                                <div class="auth-input-group">
+                                    <i class="bi bi-envelope auth-input-icon"></i>
+                                    <input type="email" class="form-control auth-input text-muted" value="{{ current_user.email if current_user else '' }}" disabled readonly>
+                                </div>
+                                <div class="form-text text-muted small mt-1">Email is tied to your account identity and cannot be edited.</div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary px-4" id="saveNameBtn">
+                                <span>Save Name</span>
+                                <span class="spinner-border spinner-border-sm ms-2 d-none" id="saveNameSpinner" role="status"></span>
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Change Password Form -->
+                    <div class="profile-card">
+                        <h5 class="text-white fw-700 mb-3 d-flex align-items-center gap-2">
+                            <i class="bi bi-shield-lock-fill text-cyan"></i> Change Password
+                        </h5>
+                        <form id="updatePasswordForm">
+                            <div class="mb-3">
+                                <label class="form-label">Current Password</label>
+                                <div class="auth-input-group">
+                                    <i class="bi bi-key auth-input-icon"></i>
+                                    <input type="password" id="inputCurrentPass" class="form-control auth-input" placeholder="••••••••" required>
+                                    <button type="button" class="password-toggle-btn toggle-vis" data-target="inputCurrentPass">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label">New Password</label>
+                                    <div class="auth-input-group">
+                                        <i class="bi bi-lock auth-input-icon"></i>
+                                        <input type="password" id="inputNewPass" class="form-control auth-input" placeholder="Min 8 characters" required>
+                                        <button type="button" class="password-toggle-btn toggle-vis" data-target="inputNewPass">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Confirm New Password</label>
+                                    <div class="auth-input-group">
+                                        <i class="bi bi-shield-check auth-input-icon"></i>
+                                        <input type="password" id="inputConfirmNewPass" class="form-control auth-input" placeholder="Re-enter password" required>
+                                        <button type="button" class="password-toggle-btn toggle-vis" data-target="inputConfirmNewPass">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary px-4" id="savePassBtn">
+                                <span>Update Password</span>
+                                <span class="spinner-border spinner-border-sm ms-2 d-none" id="savePassSpinner" role="status"></span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const alertBox = document.getElementById('profileAlert');
+    const alertMsg = document.getElementById('profileAlertMsg');
+
+    function showAlert(msg, isSuccess = false) {
+        alertMsg.textContent = msg;
+        alertBox.className = isSuccess ? 'auth-alert auth-alert-success' : 'auth-alert auth-alert-danger';
+        alertBox.classList.remove('d-none');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Toggle password fields
+    document.querySelectorAll('.toggle-vis').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetId = btn.getAttribute('data-target');
+            const input = document.getElementById(targetId);
+            const icon = btn.querySelector('i');
+            const isPass = input.getAttribute('type') === 'password';
+            input.setAttribute('type', isPass ? 'text' : 'password');
+            icon.className = isPass ? 'bi bi-eye-slash' : 'bi bi-eye';
+        });
+    });
+
+    // Update Name
+    const nameForm = document.getElementById('updateNameForm');
+    const saveNameBtn = document.getElementById('saveNameBtn');
+    const saveNameSpinner = document.getElementById('saveNameSpinner');
+
+    nameForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        alertBox.classList.add('d-none');
+        const fullName = document.getElementById('inputFullName').value.trim();
+
+        if (!fullName) {
+            showAlert('Full Name cannot be empty.');
+            return;
+        }
+
+        saveNameBtn.disabled = true;
+        saveNameSpinner.classList.remove('d-none');
+
+        try {
+            const res = await fetch('/api/auth/profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ full_name: fullName })
+            });
+            const data = await res.json();
+
+            saveNameBtn.disabled = false;
+            saveNameSpinner.classList.add('d-none');
+
+            if (!res.ok) {
+                showAlert(data.error || 'Failed to update name.');
+                return;
+            }
+
+            document.getElementById('profileDisplayName').textContent = fullName;
+            document.getElementById('profileAvatarInitials').textContent = fullName.slice(0, 2).toUpperCase();
+            showAlert('Name updated successfully!', true);
+
+        } catch (err) {
+            saveNameBtn.disabled = false;
+            saveNameSpinner.classList.add('d-none');
+            showAlert('Network error occurred.');
+        }
+    });
+
+    // Update Password
+    const passForm = document.getElementById('updatePasswordForm');
+    const savePassBtn = document.getElementById('savePassBtn');
+    const savePassSpinner = document.getElementById('savePassSpinner');
+
+    passForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        alertBox.classList.add('d-none');
+
+        const currentPassword = document.getElementById('inputCurrentPass').value;
+        const newPassword = document.getElementById('inputNewPass').value;
+        const confirmPassword = document.getElementById('inputConfirmNewPass').value;
+
+        if (newPassword.length < 8) {
+            showAlert('New password must be at least 8 characters long.');
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            showAlert('New password and confirmation do not match.');
+            return;
+        }
+
+        savePassBtn.disabled = true;
+        savePassSpinner.classList.remove('d-none');
+
+        try {
+            const res = await fetch('/api/auth/profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    current_password: currentPassword,
+                    new_password: newPassword,
+                    confirm_password: confirmPassword
+                })
+            });
+            const data = await res.json();
+
+            savePassBtn.disabled = false;
+            savePassSpinner.classList.add('d-none');
+
+            if (!res.ok) {
+                showAlert(data.error || 'Failed to update password.');
+                return;
+            }
+
+            passForm.reset();
+            showAlert('Password changed successfully!', true);
+
+        } catch (err) {
+            savePassBtn.disabled = false;
+            savePassSpinner.classList.add('d-none');
+            showAlert('Network error occurred.');
+        }
+    });
+});
+</script>
+{% endblock %}

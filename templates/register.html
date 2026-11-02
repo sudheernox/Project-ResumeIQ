@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block title %}Create Account — Resume IQ{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+{% endblock %}
+
+{% block body %}
+<div class="auth-wrapper">
+    <div class="auth-bg">
+        <div class="auth-glow-1"></div>
+        <div class="auth-glow-2"></div>
+    </div>
+
+    <div class="auth-card">
+        <div class="text-center">
+            <a href="/" class="auth-logo">
+                <div class="logo-icon"><i class="bi bi-cpu-fill"></i></div>
+                <span class="logo-text">Resume<span class="text-gradient">IQ</span></span>
+            </a>
+            <h2 class="auth-title">Create Account</h2>
+            <p class="auth-subtitle">Unlock AI resume analysis and your custom skill roadmap</p>
+        </div>
+
+        <div id="authAlert" class="auth-alert auth-alert-danger d-none">
+            <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+            <span id="authAlertMsg"></span>
+        </div>
+
+        <form id="registerForm" autocomplete="on">
+            <div class="mb-3">
+                <label class="form-label" for="regFullName">Full Name</label>
+                <div class="auth-input-group">
+                    <i class="bi bi-person auth-input-icon"></i>
+                    <input type="text" id="regFullName" class="form-control auth-input" placeholder="e.g. Alex Rivera" required autofocus autocomplete="name">
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label" for="regEmail">Email Address</label>
+                <div class="auth-input-group">
+                    <i class="bi bi-envelope auth-input-icon"></i>
+                    <input type="email" id="regEmail" class="form-control auth-input" placeholder="alex@example.com" required autocomplete="email">
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label" for="regPassword">Password</label>
+                <div class="auth-input-group">
+                    <i class="bi bi-lock auth-input-icon"></i>
+                    <input type="password" id="regPassword" class="form-control auth-input" placeholder="At least 8 characters" required autocomplete="new-password">
+                    <button type="button" class="password-toggle-btn" id="togglePasswordBtn">
+                        <i class="bi bi-eye" id="togglePasswordIcon"></i>
+                    </button>
+                </div>
+                <div class="form-text text-muted small mt-1">Must be at least 8 characters.</div>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label" for="regConfirmPassword">Confirm Password</label>
+                <div class="auth-input-group">
+                    <i class="bi bi-shield-lock auth-input-icon"></i>
+                    <input type="password" id="regConfirmPassword" class="form-control auth-input" placeholder="Re-enter password" required autocomplete="new-password">
+                    <button type="button" class="password-toggle-btn" id="toggleConfirmBtn">
+                        <i class="bi bi-eye" id="toggleConfirmIcon"></i>
+                    </button>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 py-2 fw-600" id="regSubmitBtn">
+                <span class="submit-text">Create Free Account</span>
+                <span class="spinner-border spinner-border-sm ms-2 d-none" id="regSpinner" role="status"></span>
+            </button>
+        </form>
+
+        <div class="auth-footer">
+            Already have an account? 
+            <a href="/login" class="fw-600 text-cyan ms-1">Sign In</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const registerForm = document.getElementById('registerForm');
+    const alertBox = document.getElementById('authAlert');
+    const alertMsg = document.getElementById('authAlertMsg');
+    const submitBtn = document.getElementById('regSubmitBtn');
+    const submitText = submitBtn.querySelector('.submit-text');
+    const spinner = document.getElementById('regSpinner');
+
+    const passInput = document.getElementById('regPassword');
+    const passToggle = document.getElementById('togglePasswordBtn');
+    const passIcon = document.getElementById('togglePasswordIcon');
+
+    const confirmInput = document.getElementById('regConfirmPassword');
+    const confirmToggle = document.getElementById('toggleConfirmBtn');
+    const confirmIcon = document.getElementById('toggleConfirmIcon');
+
+    passToggle.addEventListener('click', () => {
+        const isPass = passInput.getAttribute('type') === 'password';
+        passInput.setAttribute('type', isPass ? 'text' : 'password');
+        passIcon.className = isPass ? 'bi bi-eye-slash' : 'bi bi-eye';
+    });
+
+    confirmToggle.addEventListener('click', () => {
+        const isPass = confirmInput.getAttribute('type') === 'password';
+        confirmInput.setAttribute('type', isPass ? 'text' : 'password');
+        confirmIcon.className = isPass ? 'bi bi-eye-slash' : 'bi bi-eye';
+    });
+
+    registerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        alertBox.classList.add('d-none');
+
+        const fullName = document.getElementById('regFullName').value.trim();
+        const email = document.getElementById('regEmail').value.trim();
+        const password = passInput.value;
+        const confirmPassword = confirmInput.value;
+
+        if (!fullName || !email || !password || !confirmPassword) {
+            showAlert('Please fill in all required fields.');
+            return;
+        }
+
+        if (password.length < 8) {
+            showAlert('Password must contain at least 8 characters.');
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            showAlert('Passwords do not match. Please verify and try again.');
+            return;
+        }
+
+        submitBtn.disabled = true;
+        submitText.textContent = 'Creating Account...';
+        spinner.classList.remove('d-none');
+
+        try {
+            const res = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    full_name: fullName,
+                    email: email,
+                    password: password,
+                    confirm_password: confirmPassword
+                })
+            });
+            const data = await res.json();
+
+            if (!res.ok) {
+                showAlert(data.error || 'Registration failed. Please try again.');
+                submitBtn.disabled = false;
+                submitText.textContent = 'Create Free Account';
+                spinner.classList.add('d-none');
+                return;
+            }
+
+            // Redirect on success
+            window.location.href = data.redirect || '/dashboard';
+
+        } catch (err) {
+            showAlert('Network error occurred. Please try again.');
+            submitBtn.disabled = false;
+            submitText.textContent = 'Create Free Account';
+            spinner.classList.add('d-none');
+        }
+    });
+
+    function showAlert(msg) {
+        alertMsg.textContent = msg;
+        alertBox.classList.remove('d-none');
+    }
+});
+</script>
+{% endblock %}
