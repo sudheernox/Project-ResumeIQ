@@ -338,6 +338,7 @@ function displayAnalysisResults(data, filename = '') {
     }
 
     const scores = data.scores || {};
+    const catScores = data.category_scores || (data.ai_insights && data.ai_insights.category_scores) || {};
     const setVal = (id, val) => {
         const el = document.getElementById(id);
         if (el) el.innerText = val;
@@ -349,6 +350,66 @@ function displayAnalysisResults(data, filename = '') {
     setVal('r-kw', Math.round(scores.keywords || 0));
     setVal('r-ats', Math.round(scores.ats || 0));
     setVal('r-fmt', Math.round(scores.formatting || 0));
+
+    // Balanced 6-Category Weighted Scores
+    const getCatScore = (key, fallback) => {
+        if (catScores[key] && typeof catScores[key].score === 'number') {
+            return `${Math.round(catScores[key].score)}%`;
+        }
+        return `${Math.round(fallback || 0)}%`;
+    };
+
+    setVal('r-cat-skills', getCatScore('skills_and_keywords', scores.skills));
+    setVal('r-cat-exp', getCatScore('experience_and_achievements', scores.experience));
+    setVal('r-cat-fmt', getCatScore('formatting_and_structure', scores.formatting));
+    setVal('r-cat-edu', getCatScore('education_and_projects', scores.education));
+    setVal('r-cat-ats', getCatScore('ats_readability_and_parsing', scores.ats));
+    setVal('r-cat-contact', getCatScore('contact_and_completeness', 90));
+
+    // ATS Disclaimer Text
+    const disclaimer = data.ats_disclaimer || (data.ai_insights && data.ai_insights.ats_disclaimer);
+    if (disclaimer) {
+        setVal('aAtsDisclaimerText', disclaimer);
+    }
+
+    // Deductions & Suggestions
+    const deductions = data.deductions_summary || (data.ai_insights && data.ai_insights.deductions_summary) || [];
+    const dedList = document.getElementById('aDeductionsList');
+    if (dedList) {
+        dedList.innerHTML = '';
+        if (deductions.length === 0) {
+            dedList.innerHTML = '<li class="text-secondary small">No deductions applied. Resume meets standard ATS parsing thresholds.</li>';
+        } else {
+            deductions.forEach(d => {
+                const li = document.createElement('li');
+                li.className = 'text-warning small mb-2';
+                li.innerHTML = `<i class="bi bi-dash-circle text-danger me-2"></i><strong>${d.category || 'Deduction'} (${d.points || '-pts'}):</strong> ${d.reason || ''}`;
+                dedList.appendChild(li);
+            });
+        }
+    }
+
+    const dedBadge = document.getElementById('aDeductionCountBadge');
+    if (dedBadge) {
+        dedBadge.innerText = deductions.length > 0 ? `${deductions.length} Factor${deductions.length > 1 ? 's' : ''} Flagged` : 'Passed All Checks';
+        dedBadge.className = deductions.length > 0 ? 'badge bg-warning text-dark small' : 'badge bg-success small';
+    }
+
+    const sugList = document.getElementById('aSuggestionsList');
+    if (sugList) {
+        sugList.innerHTML = '';
+        const suggestions = data.recommendations || [];
+        if (suggestions.length === 0) {
+            sugList.innerHTML = '<li class="text-secondary small">Maintain current format and keep measurable accomplishments updated.</li>';
+        } else {
+            suggestions.slice(0, 5).forEach(s => {
+                const li = document.createElement('li');
+                li.className = 'text-white small mb-2';
+                li.innerHTML = `<i class="bi bi-arrow-up-circle text-cyan me-2"></i>${s}`;
+                sugList.appendChild(li);
+            });
+        }
+    }
 
     // Radar Chart
     Charts.renderAnalysisRadar('analysisRadarChart', scores);
@@ -409,7 +470,7 @@ async function initJobMatchPage() {
     // Auto-load existing saved job match from backend if exists
     try {
         const existing = await ResumeIQ.apiCall(`/api/job-match?resume_id=${resumeId}`);
-        if (existing && existing.has_match) {
+        if (existing && existing.has_match && existing.job_description) {
             if (existing.job_role) {
                 const titleInput = document.getElementById('jobTitleInput');
                 if (titleInput) titleInput.value = existing.job_role;
@@ -419,9 +480,18 @@ async function initJobMatchPage() {
                 if (descInput) descInput.value = existing.job_description;
             }
             displayJobMatchResults(existing);
+        } else {
+            const emptyState = document.getElementById('jmEmptyState');
+            if (emptyState) emptyState.style.display = 'block';
+            const results = document.getElementById('matchResults');
+            if (results) results.style.display = 'none';
         }
     } catch (e) {
         console.log("No previous job match found:", e);
+        const emptyState = document.getElementById('jmEmptyState');
+        if (emptyState) emptyState.style.display = 'block';
+        const results = document.getElementById('matchResults');
+        if (results) results.style.display = 'none';
     }
 
     matchBtn.addEventListener('click', async () => {
@@ -435,18 +505,20 @@ async function initJobMatchPage() {
         const jobRoleSelect = (document.getElementById('jobRoleSelect')?.value || '').trim();
         const jobDesc = (document.getElementById('jobDescInput')?.value || '').trim();
 
-        const role = jobTitle || jobRoleSelect;
-
-        if (!role && !jobDesc) {
-            ResumeIQ.showToast("Please enter a job title or paste a job description.", "warning");
+        if (!jobDesc || jobDesc.length < 15) {
+            ResumeIQ.showToast("Please upload or paste a job description to access this feature.", "warning");
             return;
         }
 
+        const role = jobTitle || jobRoleSelect || 'Target Role';
+
         const loading = document.getElementById('matchLoading');
         const results = document.getElementById('matchResults');
+        const emptyState = document.getElementById('jmEmptyState');
 
         loading.style.display = 'block';
         results.style.display = 'none';
+        if (emptyState) emptyState.style.display = 'none';
 
         try {
             const data = await ResumeIQ.apiCall('/api/job-match', 'POST', {
@@ -459,6 +531,7 @@ async function initJobMatchPage() {
             displayJobMatchResults(data);
             ResumeIQ.showToast("Job compatibility calculated and saved!", "success");
         } catch (err) {
+            if (emptyState) emptyState.style.display = 'block';
             ResumeIQ.showToast(err.message || "Match calculation failed.", "error");
         } finally {
             loading.style.display = 'none';
@@ -470,6 +543,9 @@ function displayJobMatchResults(data) {
     const results = document.getElementById('matchResults');
     if (!results) return;
     results.style.display = 'block';
+
+    const emptyState = document.getElementById('jmEmptyState');
+    if (emptyState) emptyState.style.display = 'none';
 
     const overall = Math.round(data.overall_match || 0);
     const scoreNum = document.getElementById('matchScoreNum');
@@ -562,11 +638,16 @@ async function initSkillGapPage() {
         if (existing && existing.has_gap) {
             displaySkillGapResults(existing);
         } else {
-            // First time load: automatically compute initial gap
-            triggerSkillGapComputation(resumeId, currentRole);
+            const emptyState = document.getElementById('gapEmptyState');
+            if (emptyState) emptyState.style.display = 'block';
+            const results = document.getElementById('gapResults');
+            if (results) results.style.display = 'none';
         }
     } catch (e) {
-        triggerSkillGapComputation(resumeId, currentRole);
+        const emptyState = document.getElementById('gapEmptyState');
+        if (emptyState) emptyState.style.display = 'block';
+        const results = document.getElementById('gapResults');
+        if (results) results.style.display = 'none';
     }
 
     analyzeBtn.addEventListener('click', async () => {
@@ -593,10 +674,16 @@ async function initSkillGapPage() {
                 if (existing && existing.has_gap) {
                     displaySkillGapResults(existing);
                 } else {
-                    await triggerSkillGapComputation(curResumeId, role);
+                    const emptyState = document.getElementById('gapEmptyState');
+                    if (emptyState) emptyState.style.display = 'block';
+                    const results = document.getElementById('gapResults');
+                    if (results) results.style.display = 'none';
                 }
             } catch (e) {
-                await triggerSkillGapComputation(curResumeId, role);
+                const emptyState = document.getElementById('gapEmptyState');
+                if (emptyState) emptyState.style.display = 'block';
+                const results = document.getElementById('gapResults');
+                if (results) results.style.display = 'none';
             }
         });
     }
@@ -605,9 +692,11 @@ async function initSkillGapPage() {
 async function triggerSkillGapComputation(resumeId, role, customJd = '') {
     const loading = document.getElementById('gapLoading');
     const results = document.getElementById('gapResults');
+    const emptyState = document.getElementById('gapEmptyState');
 
     if (loading) loading.style.display = 'block';
     if (results) results.style.display = 'none';
+    if (emptyState) emptyState.style.display = 'none';
 
     try {
         const data = await ResumeIQ.apiCall('/api/skill-gap', 'POST', {
@@ -619,6 +708,7 @@ async function triggerSkillGapComputation(resumeId, role, customJd = '') {
         displaySkillGapResults(data);
         ResumeIQ.showToast("Skill gap analysis updated and saved!", "success");
     } catch (err) {
+        if (emptyState) emptyState.style.display = 'block';
         ResumeIQ.showToast(err.message || "Skill gap analysis failed.", "error");
     } finally {
         if (loading) loading.style.display = 'none';
@@ -629,6 +719,9 @@ function displaySkillGapResults(data) {
     const results = document.getElementById('gapResults');
     if (!results) return;
     results.style.display = 'block';
+
+    const emptyState = document.getElementById('gapEmptyState');
+    if (emptyState) emptyState.style.display = 'none';
 
     const coverage = Math.round(data.overall_coverage || 0);
     const scoreNum = document.getElementById('gapScoreNum');
@@ -725,18 +818,26 @@ async function initRoadmapPage() {
 
     const currentRole = roleSelect ? roleSelect.value : 'Software Developer';
 
-    // FIRST: Check if an existing roadmap is already saved in SQLite!
-    // NEVER overwrite existing progress on refresh!
+    // Check if an existing roadmap is already saved in SQLite
     try {
         const existing = await ResumeIQ.apiCall(`/api/roadmap?resume_id=${resumeId}&career_role=${encodeURIComponent(currentRole)}`);
         if (existing && existing.has_roadmap) {
             displayRoadmapResults(existing);
         } else {
-            // First time: generate automatically
-            await triggerRoadmapGeneration(resumeId, currentRole);
+            const emptyState = document.getElementById('roadmapEmptyState');
+            if (emptyState) emptyState.style.display = 'block';
+            const phases = document.getElementById('roadmapPhases');
+            const chartRow = document.getElementById('roadmapChartRow');
+            if (phases) phases.style.display = 'none';
+            if (chartRow) chartRow.style.display = 'none';
         }
     } catch (e) {
-        await triggerRoadmapGeneration(resumeId, currentRole);
+        const emptyState = document.getElementById('roadmapEmptyState');
+        if (emptyState) emptyState.style.display = 'block';
+        const phases = document.getElementById('roadmapPhases');
+        const chartRow = document.getElementById('roadmapChartRow');
+        if (phases) phases.style.display = 'none';
+        if (chartRow) chartRow.style.display = 'none';
     }
 
     genBtn.addEventListener('click', async () => {
@@ -760,10 +861,24 @@ async function initRoadmapPage() {
                 if (existing && existing.has_roadmap) {
                     displayRoadmapResults(existing);
                 } else {
-                    await triggerRoadmapGeneration(curResumeId, role);
+                    const emptyState = document.getElementById('roadmapEmptyState');
+                    if (emptyState) emptyState.style.display = 'block';
+                    const phases = document.getElementById('roadmapPhases');
+                    const chartRow = document.getElementById('roadmapChartRow');
+                    if (phases) phases.style.display = 'none';
+                    if (chartRow) chartRow.style.display = 'none';
+                    const container = document.getElementById('roadmapItems');
+                    if (container) container.innerHTML = '';
                 }
             } catch (e) {
-                await triggerRoadmapGeneration(curResumeId, role);
+                const emptyState = document.getElementById('roadmapEmptyState');
+                if (emptyState) emptyState.style.display = 'block';
+                const phases = document.getElementById('roadmapPhases');
+                const chartRow = document.getElementById('roadmapChartRow');
+                if (phases) phases.style.display = 'none';
+                if (chartRow) chartRow.style.display = 'none';
+                const container = document.getElementById('roadmapItems');
+                if (container) container.innerHTML = '';
             }
         });
     }
@@ -772,8 +887,10 @@ async function initRoadmapPage() {
 async function triggerRoadmapGeneration(resumeId, role) {
     const loading = document.getElementById('roadmapLoading');
     const container = document.getElementById('roadmapItems');
+    const emptyState = document.getElementById('roadmapEmptyState');
 
     if (loading) loading.style.display = 'block';
+    if (emptyState) emptyState.style.display = 'none';
     if (container) container.innerHTML = '';
 
     try {
@@ -785,6 +902,7 @@ async function triggerRoadmapGeneration(resumeId, role) {
         displayRoadmapResults(data);
         ResumeIQ.showToast("Personalized learning roadmap generated and saved!", "success");
     } catch (err) {
+        if (emptyState) emptyState.style.display = 'block';
         ResumeIQ.showToast(err.message || "Failed to generate roadmap.", "error");
     } finally {
         if (loading) loading.style.display = 'none';
@@ -792,6 +910,9 @@ async function triggerRoadmapGeneration(resumeId, role) {
 }
 
 function displayRoadmapResults(data) {
+    const emptyState = document.getElementById('roadmapEmptyState');
+    if (emptyState) emptyState.style.display = 'none';
+
     const phases = document.getElementById('roadmapPhases');
     const chartRow = document.getElementById('roadmapChartRow');
     if (phases) phases.style.display = 'flex';
@@ -1006,13 +1127,57 @@ async function initComparisonPage() {
     // Auto-load existing comparison if already computed
     try {
         const existing = await rIQ.apiCall(`/api/compare-jobs?resume_id=${resumeId}`);
-        if (existing && existing.has_comparison) {
+        if (existing && existing.has_comparison && existing.comparisons && existing.comparisons.length >= 2) {
             displayComparisonResults(existing);
         } else {
-            await triggerComparison(resumeId);
+            const emptyState = document.getElementById('compEmptyState');
+            if (emptyState) emptyState.style.display = 'block';
+            const results = document.getElementById('compResults');
+            if (results) results.style.display = 'none';
         }
     } catch (e) {
-        await triggerComparison(resumeId);
+        const emptyState = document.getElementById('compEmptyState');
+        if (emptyState) emptyState.style.display = 'block';
+        const results = document.getElementById('compResults');
+        if (results) results.style.display = 'none';
+    }
+
+    // Dynamic "+ Add Another Job" button
+    let jobIndexCounter = 2;
+    const addAnotherBtn = document.getElementById('addAnotherJobBtn');
+    if (addAnotherBtn) {
+        addAnotherBtn.addEventListener('click', () => {
+            jobIndexCounter++;
+            const inputsContainer = document.getElementById('jobInputsContainer');
+            if (!inputsContainer) return;
+
+            const col = document.createElement('div');
+            col.className = 'col-lg-6 job-input-card';
+            col.setAttribute('data-index', jobIndexCounter);
+            col.innerHTML = `
+                <div class="p-3 rounded border border-secondary border-opacity-25" style="background: rgba(15, 22, 41, 0.4);">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="mb-0 text-cyan fw-600">Job Opportunity #${jobIndexCounter}</h6>
+                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 remove-job-card-btn">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label text-secondary small">Job ${jobIndexCounter}: Role Title</label>
+                        <input type="text" class="form-control form-control-dark job-title-field" placeholder="e.g. Lead Engineer / Cloud Architect">
+                    </div>
+                    <div>
+                        <label class="form-label text-secondary small">Job ${jobIndexCounter} Description & Requirements</label>
+                        <textarea class="form-control form-textarea-dark job-desc-field" rows="7" placeholder="Paste complete job description for Opportunity #${jobIndexCounter}..."></textarea>
+                    </div>
+                </div>
+            `;
+            inputsContainer.appendChild(col);
+
+            col.querySelector('.remove-job-card-btn')?.addEventListener('click', () => {
+                col.remove();
+            });
+        });
     }
 
     compBtn.addEventListener('click', async () => {
@@ -1021,7 +1186,29 @@ async function initComparisonPage() {
             rIQ.showToast("Please upload a resume first.", "warning");
             return;
         }
-        await triggerComparison(curResumeId);
+
+        const cards = document.querySelectorAll('#jobInputsContainer .job-input-card');
+        const jobsList = [];
+        cards.forEach((card, idx) => {
+            const titleInput = card.querySelector('.job-title-field');
+            const descInput = card.querySelector('.job-desc-field');
+            const title = (titleInput?.value || '').trim() || `Job Opportunity #${idx + 1}`;
+            const desc = (descInput?.value || '').trim();
+            if (desc.length >= 15) {
+                jobsList.push({
+                    title: title,
+                    role: title,
+                    description: desc
+                });
+            }
+        });
+
+        if (jobsList.length < 2) {
+            rIQ.showToast("Please provide at least two valid job descriptions for comparison.", "warning");
+            return;
+        }
+
+        await triggerComparison(curResumeId, jobsList);
     });
 
     if (addCustomBtn) {
@@ -1032,8 +1219,8 @@ async function initComparisonPage() {
             const title = (document.getElementById('customCompTitle')?.value || '').trim();
             const desc = (document.getElementById('customCompDesc')?.value || '').trim();
 
-            if (!title || !desc) {
-                rIQ.showToast("Please enter both custom role title and requirements.", "warning");
+            if (!title || !desc || desc.length < 15) {
+                rIQ.showToast("Please enter both custom role title and requirements (min 15 characters).", "warning");
                 return;
             }
 
@@ -1044,23 +1231,27 @@ async function initComparisonPage() {
     }
 }
 
-async function triggerComparison(resumeId, customRoles = []) {
+async function triggerComparison(resumeId, jobsList = []) {
     const rIQ = getResumeIQ();
     const loading = document.getElementById('compLoading');
     const results = document.getElementById('compResults');
+    const emptyState = document.getElementById('compEmptyState');
 
     if (loading) loading.style.display = 'block';
     if (results) results.style.display = 'none';
+    if (emptyState) emptyState.style.display = 'none';
 
     try {
         const data = await rIQ.apiCall('/api/compare-jobs', 'POST', {
             resume_id: resumeId,
-            custom_roles: customRoles
+            jobs: jobsList,
+            custom_roles: jobsList
         });
 
         displayComparisonResults(data);
         rIQ.showToast("Comparison computed and saved!", "success");
     } catch (err) {
+        if (emptyState) emptyState.style.display = 'block';
         if (rIQ) rIQ.showToast(err.message || "Comparison failed.", "error");
     } finally {
         if (loading) loading.style.display = 'none';
@@ -1068,6 +1259,9 @@ async function triggerComparison(resumeId, customRoles = []) {
 }
 
 function displayComparisonResults(data) {
+    const emptyState = document.getElementById('compEmptyState');
+    if (emptyState) emptyState.style.display = 'none';
+
     const results = document.getElementById('compResults');
     if (!results) return;
     results.style.display = 'block';

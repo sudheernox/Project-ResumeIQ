@@ -19,7 +19,7 @@ def is_smtp_configured():
 
 def send_password_reset_email(to_email, reset_url):
     """
-    Send a secure password reset link to user's email via SMTP.
+    Send a secure password reset link to user's email via SMTP / Gmail.
     Returns:
         dict: {
             'sent': bool,
@@ -31,13 +31,18 @@ def send_password_reset_email(to_email, reset_url):
         return {
             'sent': False,
             'configured': False,
-            'error': 'SMTP credentials are not configured in environment variables (SMTP_SERVER, SMTP_USERNAME, SMTP_PASSWORD).'
+            'error': (
+                'Gmail / SMTP credentials are not configured in environment variables. '
+                'To send real emails to your Gmail inbox, add SMTP_SERVER=smtp.gmail.com, '
+                'SMTP_PORT=587, SMTP_USERNAME=your-email@gmail.com, and SMTP_PASSWORD=your-16-char-app-password to .env.'
+            )
         }
 
     cfg = current_app.config
     server_host = cfg.get('MAIL_SERVER')
     port = cfg.get('MAIL_PORT', 587)
     use_tls = cfg.get('MAIL_USE_TLS', True)
+    use_ssl = cfg.get('MAIL_USE_SSL', False) or port == 465
     username = cfg.get('MAIL_USERNAME')
     password = cfg.get('MAIL_PASSWORD')
     sender = cfg.get('MAIL_DEFAULT_SENDER', 'noreply@resumeiq.ai')
@@ -116,12 +121,21 @@ The ResumeIQ Team
     msg.attach(MIMEText(html_content, 'html'))
 
     try:
-        server = smtplib.SMTP(server_host, port, timeout=12)
-        if use_tls:
-            server.starttls()
+        if use_ssl:
+            server = smtplib.SMTP_SSL(server_host, port, timeout=15)
+        else:
+            server = smtplib.SMTP(server_host, port, timeout=15)
+            if use_tls:
+                server.starttls()
+
         server.login(username, password)
         server.sendmail(sender, [to_email], msg.as_string())
         server.quit()
         return {'sent': True, 'configured': True, 'error': None}
+    except smtplib.SMTPAuthenticationError as e:
+        error_msg = f"Gmail / SMTP Authentication Error: {str(e)}."
+        if 'gmail' in str(server_host).lower():
+            error_msg += " Note: For Gmail accounts with 2-Step Verification, generate a 16-character App Password at https://myaccount.google.com/apppasswords and set it as SMTP_PASSWORD in .env."
+        return {'sent': False, 'configured': True, 'error': error_msg}
     except Exception as e:
         return {'sent': False, 'configured': True, 'error': f"SMTP dispatch failed: {str(e)}"}

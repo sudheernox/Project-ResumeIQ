@@ -72,7 +72,7 @@ print(f"Analysis completed. Overall Score: {analysis_data['scores']['overall']}"
 
 # 2. Test Compare All Roles (POST /api/compare-jobs)
 print("\n--- Testing Compare All Roles (triggerComparison / compareBtn) ---")
-res = client.post('/api/compare-jobs', json={'resume_id': resume_id})
+res = client.post('/api/compare-jobs', json={'resume_id': resume_id, 'roles': ['Software Developer', 'Web Developer', 'Data Analyst']})
 assert res.status_code == 200
 comp_data = res.get_json()
 assert comp_data['success'] is True
@@ -93,6 +93,7 @@ custom_role = {
 }
 res = client.post('/api/compare-jobs', json={
     'resume_id': resume_id,
+    'roles': ['Software Developer', 'Web Developer'],
     'custom_roles': [custom_role]
 })
 assert res.status_code == 200

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Resume IQ — AI Resume Analyzer & Skill Gap Roadmap{% endblock %}
+{% block title %}ResumeIQ — AI-Powered Resume Analyzer & Career Guidance Platform{% endblock %}
 
 {% block body %}
 <!-- ═══ NAVBAR ═══ -->
@@ -11,26 +11,52 @@
             </div>
             <span class="logo-text">Resume<span class="text-gradient">IQ</span></span>
         </a>
-        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+
+        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
+
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav mx-auto gap-1">
-                <li class="nav-item"><a class="nav-link" href="#home">Home</a></li>
-                <li class="nav-item"><a class="nav-link" href="#features">Features</a></li>
-                <li class="nav-item"><a class="nav-link" href="#how-it-works">How It Works</a></li>
-                <li class="nav-item"><a class="nav-link" href="#about">About</a></li>
+                <li class="nav-item"><a class="nav-link" href="#home" data-i18n="nav_home">Home</a></li>
+                <li class="nav-item"><a class="nav-link" href="#features" data-i18n="nav_features">Features</a></li>
+                <li class="nav-item"><a class="nav-link" href="#how-it-works" data-i18n="nav_how_it_works">How It Works</a></li>
+                <li class="nav-item"><a class="nav-link" href="#why-choose-us" data-i18n="nav_why_us">Why ResumeIQ</a></li>
+                <li class="nav-item"><a class="nav-link" href="#career-impact" data-i18n="nav_career_impact">Career Impact</a></li>
             </ul>
-            <div class="d-flex align-items-center gap-2">
-                {% if current_user %}
-                    <a href="/dashboard" class="btn btn-outline-primary btn-sm px-3">Dashboard</a>
+
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <!-- Language Switcher Dropdown -->
+                <div class="dropdown me-2">
+                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle lang-switcher-btn d-flex align-items-center gap-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-translate text-cyan"></i>
+                        <span class="current-lang-label">English</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow">
+                        <li>
+                            <a class="dropdown-item lang-select-item d-flex align-items-center justify-content-between" href="#" data-lang="en">
+                                <span>🇬🇧 English</span>
+                                <i class="bi bi-check2 text-cyan d-none check-icon"></i>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item lang-select-item d-flex align-items-center justify-content-between" href="#" data-lang="hi">
+                                <span>🇮🇳 हिन्दी (Hindi)</span>
+                                <i class="bi bi-check2 text-cyan d-none check-icon"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
+                {% if session.get('user_id') %}
+                    <a href="/dashboard" class="btn btn-outline-primary btn-sm px-3" data-i18n="nav_dashboard">Dashboard</a>
                     <a href="/profile" class="btn btn-primary btn-sm px-3 d-flex align-items-center gap-1">
                         <i class="bi bi-person-circle"></i>
-                        <span>{{ current_user.full_name.split(' ')[0] }}</span>
+                        <span data-i18n="nav_profile">Profile</span>
                     </a>
                 {% else %}
-                    <a href="/login" class="btn btn-outline-primary btn-sm px-3">Sign In</a>
-                    <a href="/register" class="btn btn-primary btn-sm px-3">Get Started</a>
+                    <a href="/login" class="btn btn-outline-primary btn-sm px-3" data-i18n="nav_signin">Sign In</a>
+                    <a href="/register" class="btn btn-primary btn-sm px-3" data-i18n="nav_signup">Get Started</a>
                 {% endif %}
             </div>
         </div>
@@ -39,7 +65,6 @@
 
 <!-- ═══ HERO SECTION ═══ -->
 <section id="home" class="hero-section">
-    <!-- Animated background -->
     <div class="hero-bg">
         <div class="hero-grid"></div>
         <div class="hero-glow glow-1"></div>
@@ -53,103 +78,113 @@
             <div class="col-lg-7">
                 <div class="hero-badge mb-4">
                     <span class="badge-dot"></span>
-                    AI-Powered Career Platform • Hackfest 3.0
+                    <span data-i18n="hero_badge">AI-Powered Career & Resume Intelligence Platform</span>
                 </div>
+
                 <h1 class="hero-title">
-                    Your Resume.<br>
-                    Your Skills.<br>
-                    <span class="text-gradient">Your Future.</span>
+                    <span data-i18n="hero_title_1">Your Resume.</span><br>
+                    <span data-i18n="hero_title_2">Your Skills.</span><br>
+                    <span class="text-gradient" data-i18n="hero_title_3">Your Future.</span>
                 </h1>
-                <p class="hero-subtitle">
-                    ResumeIQ analyzes your resume using advanced AI and NLP to identify
-                    skill gaps, calculate job compatibility scores, and generate
-                    personalized learning roadmaps to make you <strong>job-ready</strong>.
+
+                <p class="hero-subtitle" data-i18n="hero_subtitle">
+                    ResumeIQ analyzes your resume using advanced NLP and weighted ATS algorithms to identify skill gaps, calculate true job compatibility, and build customized learning roadmaps to make you job-ready.
                 </p>
 
                 <div class="hero-stats mb-5">
                     <div class="stat-item">
-                        <div class="stat-num">6</div>
-                        <div class="stat-label">AI Features</div>
+                        <div class="stat-num">5</div>
+                        <div class="stat-label" data-i18n="hero_stat_features">AI Modules</div>
                     </div>
                     <div class="stat-divider"></div>
                     <div class="stat-item">
-                        <div class="stat-num">8+</div>
-                        <div class="stat-label">Career Roles</div>
+                        <div class="stat-num">6</div>
+                        <div class="stat-label">Weighted Categories</div>
                     </div>
                     <div class="stat-divider"></div>
                     <div class="stat-item">
                         <div class="stat-num">100+</div>
-                        <div class="stat-label">Skills Tracked</div>
+                        <div class="stat-label" data-i18n="hero_stat_skills">Skills Tracked</div>
                     </div>
                 </div>
 
                 <div class="d-flex flex-wrap gap-3">
                     <a href="/analysis" class="btn btn-primary btn-lg px-5 py-3 hero-cta">
-                        <i class="bi bi-cloud-upload me-2"></i>Analyze My Resume
+                        <i class="bi bi-cloud-upload me-2"></i><span data-i18n="hero_cta_analyze">Analyze My Resume</span>
                     </a>
                     <a href="#features" class="btn btn-outline-light btn-lg px-5 py-3">
-                        <i class="bi bi-compass me-2"></i>Explore Features
+                        <i class="bi bi-compass me-2"></i><span data-i18n="hero_cta_explore">Explore Features</span>
                     </a>
                 </div>
 
                 <div class="mt-4 text-secondary small">
-                    <i class="bi bi-shield-check me-1 text-success"></i>Free to use &nbsp;&bull;&nbsp;
-                    <i class="bi bi-file-earmark-check me-1 text-info"></i>PDF & DOCX supported &nbsp;&bull;&nbsp;
-                    <i class="bi bi-lightning-charge me-1 text-warning"></i>Instant analysis
+                    <i class="bi bi-shield-check me-1 text-success"></i><span data-i18n="hero_tag_free">Free to Use</span> &nbsp;&bull;&nbsp;
+                    <i class="bi bi-file-earmark-check me-1 text-info"></i><span data-i18n="hero_tag_formats">PDF & DOCX Supported</span> &nbsp;&bull;&nbsp;
+                    <i class="bi bi-lightning-charge me-1 text-warning"></i><span data-i18n="hero_tag_instant">Instant Explainable Insights</span>
                 </div>
             </div>
 
             <div class="col-lg-5 d-none d-lg-block">
                 <div class="hero-visual">
-                    <div class="floating-card card-1">
-                        <div class="d-flex align-items-center gap-2">
-                            <div class="score-ring" data-score="82">
+                    <!-- Floating Score Ring -->
+                    <div class="floating-card card-1 shadow-lg">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="score-ring" data-score="86">
                                 <svg viewBox="0 0 36 36">
                                     <circle cx="18" cy="18" r="15.9" fill="none" stroke="#1e293b" stroke-width="3"/>
-                                    <circle cx="18" cy="18" r="15.9" fill="none" stroke="url(#grad1)" stroke-width="3"
-                                            stroke-dasharray="82 18" stroke-linecap="round" transform="rotate(-90 18 18)"/>
-                                    <defs><linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:#6366f1"/><stop offset="100%" style="stop-color:#22d3ee"/></linearGradient></defs>
+                                    <circle cx="18" cy="18" r="15.9" fill="none" stroke="url(#heroGrad1)" stroke-width="3"
+                                            stroke-dasharray="86 14" stroke-linecap="round" transform="rotate(-90 18 18)"/>
+                                    <defs>
+                                        <linearGradient id="heroGrad1" x1="0%" y1="0%" x2="100%" y2="0%">
+                                            <stop offset="0%" style="stop-color:#6366f1"/>
+                                            <stop offset="100%" style="stop-color:#22d3ee"/>
+                                        </linearGradient>
+                                    </defs>
                                 </svg>
-                                <span>82</span>
+                                <span>86</span>
                             </div>
                             <div>
-                                <div class="fw-600 text-white">Resume Score</div>
-                                <div class="text-success small"><i class="bi bi-arrow-up-short"></i> Above Average</div>
+                                <div class="fw-700 text-white">Realistic ATS Rating</div>
+                                <div class="text-success small"><i class="bi bi-shield-check"></i> 6 Categories Weighted</div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="floating-card card-2">
-                        <div class="text-secondary small mb-2">Skill Match — Software Developer</div>
+                    <!-- Floating Skill Gap -->
+                    <div class="floating-card card-2 shadow-lg">
+                        <div class="text-secondary small mb-2 fw-600">Target Role: Software Engineer</div>
                         <div class="d-flex gap-1 flex-wrap">
-                            <span class="skill-tag matched">Python</span>
-                            <span class="skill-tag matched">React</span>
-                            <span class="skill-tag missing">Docker</span>
-                            <span class="skill-tag matched">SQL</span>
-                            <span class="skill-tag missing">Kubernetes</span>
+                            <span class="skill-tag matched"><i class="bi bi-check-sm"></i>Python</span>
+                            <span class="skill-tag matched"><i class="bi bi-check-sm"></i>FastAPI</span>
+                            <span class="skill-tag matched"><i class="bi bi-check-sm"></i>PostgreSQL</span>
+                            <span class="skill-tag missing"><i class="bi bi-x-sm"></i>Docker</span>
+                            <span class="skill-tag missing"><i class="bi bi-x-sm"></i>CI/CD</span>
                         </div>
                     </div>
 
-                    <div class="floating-card card-3">
-                        <div class="text-secondary small mb-1">Job Compatibility</div>
-                        <div class="match-bar-wrap">
-                            <div class="match-bar-label"><span>Web Developer</span><span class="text-gradient">78%</span></div>
-                            <div class="match-bar"><div class="match-bar-fill" style="width:78%"></div></div>
-                            <div class="match-bar-label"><span>Data Analyst</span><span class="text-warning">55%</span></div>
-                            <div class="match-bar"><div class="match-bar-fill bg-warning" style="width:55%"></div></div>
-                            <div class="match-bar-label"><span>ML Engineer</span><span class="text-danger">38%</span></div>
-                            <div class="match-bar"><div class="match-bar-fill bg-danger" style="width:38%"></div></div>
+                    <!-- Floating Roadmap Card -->
+                    <div class="floating-card card-3 shadow-lg">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="text-secondary small fw-600">Learning Roadmap</span>
+                            <span class="badge bg-success-soft text-success small">Phase 2: Practice</span>
+                        </div>
+                        <div class="progress mt-2" style="height:6px; background: rgba(255,255,255,0.08);">
+                            <div class="progress-bar" style="width: 65%; background: linear-gradient(90deg, #6366f1, #22d3ee);"></div>
+                        </div>
+                        <div class="d-flex justify-content-between text-secondary small mt-2">
+                            <span>Docker Containerization</span>
+                            <span class="text-white fw-600">65% Complete</span>
                         </div>
                     </div>
 
-                    <!-- Central Resume card -->
+                    <!-- Central Mockup -->
                     <div class="resume-preview-card">
                         <div class="resume-icon-wrap">
-                            <i class="bi bi-file-earmark-person"></i>
+                            <i class="bi bi-file-earmark-person-fill"></i>
                         </div>
                         <div class="text-center mt-2">
-                            <div class="text-white fw-600">Resume.pdf</div>
-                            <div class="text-secondary small">AI Analysis Active</div>
+                            <div class="text-white fw-700">Resume.pdf</div>
+                            <div class="text-cyan small">AI Intelligence Active</div>
                             <div class="analysis-pulse mt-2">
                                 <span></span><span></span><span></span>
                             </div>
@@ -161,261 +196,262 @@
     </div>
 </section>
 
-<!-- ═══ FEATURES SECTION ═══ -->
+<!-- ═══ 5 CORE FEATURES SECTION ═══ -->
 <section id="features" class="features-section py-6">
     <div class="container">
         <div class="section-header text-center mb-6">
-            <span class="section-badge">Core Features</span>
-            <h2 class="section-title">Everything You Need to <span class="text-gradient">Succeed</span></h2>
-            <p class="section-sub">Six powerful AI-driven tools to transform your job search</p>
+            <span class="section-badge" data-i18n="feat_title">Core AI Capabilities</span>
+            <h2 class="section-title mt-2">Everything You Need to <span class="text-gradient">Succeed</span></h2>
+            <p class="section-sub" data-i18n="feat_subtitle">Five powerful AI-driven modules designed to give you transparent, explainable career guidance</p>
         </div>
 
         <div class="row g-4">
-            <!-- Feature 1 -->
+            <!-- Feature 1: AI Resume Analysis -->
             <div class="col-md-6 col-lg-4">
-                <div class="feature-card" data-feature="1">
+                <div class="feature-card h-100" data-feature="1">
                     <div class="feature-icon-wrap" style="--icon-color:#6366f1">
                         <i class="bi bi-file-earmark-text"></i>
                     </div>
-                    <h4>AI Resume Analysis</h4>
-                    <p>Deep NLP-powered analysis of your resume. Extract skills, detect strengths/weaknesses, and get an overall quality score out of 100.</p>
+                    <h4 data-i18n="feat_analysis_title">AI Resume Analysis</h4>
+                    <p data-i18n="feat_analysis_desc">Evaluates content, action verbs, quantifiable metrics, and structure with realistic, weighted ATS scoring.</p>
                     <div class="feature-tags">
-                        <span>NLP</span><span>Skill Extraction</span><span>Quality Score</span>
+                        <span>Realistic ATS</span><span>6 Categories</span><span>Deductions Summary</span>
                     </div>
-                    <a href="/analysis" class="feature-link">Analyze Now <i class="bi bi-arrow-right"></i></a>
+                    <a href="/analysis" class="feature-link mt-auto">Try Resume Analysis <i class="bi bi-arrow-right"></i></a>
                 </div>
             </div>
 
-            <!-- Feature 2 -->
+            <!-- Feature 2: Smart Job Match -->
             <div class="col-md-6 col-lg-4">
-                <div class="feature-card" data-feature="2">
+                <div class="feature-card h-100" data-feature="2">
                     <div class="feature-icon-wrap" style="--icon-color:#8b5cf6">
                         <i class="bi bi-bullseye"></i>
                     </div>
-                    <h4>Smart Job Match Score</h4>
-                    <p>Paste any job description and get an instant compatibility percentage. Understand exactly why you match or don't match.</p>
+                    <h4 data-i18n="feat_match_title">Smart Job Match</h4>
+                    <p data-i18n="feat_match_desc">Compare your resume against any real job description to compute compatibility, matching, and missing skills.</p>
                     <div class="feature-tags">
-                        <span>Semantic Matching</span><span>Score Explained</span>
+                        <span>Actual JDs</span><span>Skill Extraction</span><span>Actionable Feedback</span>
                     </div>
-                    <a href="/job-match" class="feature-link">Match Jobs <i class="bi bi-arrow-right"></i></a>
+                    <a href="/job-match" class="feature-link mt-auto">Test Job Match <i class="bi bi-arrow-right"></i></a>
                 </div>
             </div>
 
-            <!-- Feature 3 -->
+            <!-- Feature 3: Skill Gap Analysis -->
             <div class="col-md-6 col-lg-4">
-                <div class="feature-card" data-feature="3">
+                <div class="feature-card h-100" data-feature="3">
                     <div class="feature-icon-wrap" style="--icon-color:#06b6d4">
                         <i class="bi bi-radar"></i>
                     </div>
-                    <h4>Skill Gap Detection</h4>
-                    <p>Compare your current skills against any career role. Visual radar chart shows where you stand vs. what's required.</p>
+                    <h4 data-i18n="feat_gap_title">Skill Gap Analysis</h4>
+                    <p data-i18n="feat_gap_desc">Identify technical and soft skill gaps against industry role benchmarks or custom job postings.</p>
                     <div class="feature-tags">
-                        <span>Radar Chart</span><span>Role Profiles</span><span>Priority Skills</span>
+                        <span>Radar Visual</span><span>Priority Skills</span><span>Role Profiles</span>
                     </div>
-                    <a href="/skill-gap" class="feature-link">Find Gaps <i class="bi bi-arrow-right"></i></a>
+                    <a href="/skill-gap" class="feature-link mt-auto">Find Skill Gaps <i class="bi bi-arrow-right"></i></a>
                 </div>
             </div>
 
-            <!-- Feature 4 -->
-            <div class="col-md-6 col-lg-4">
-                <div class="feature-card" data-feature="4">
+            <!-- Feature 4: Learning Roadmap -->
+            <div class="col-md-6 col-lg-6">
+                <div class="feature-card h-100" data-feature="4">
                     <div class="feature-icon-wrap" style="--icon-color:#10b981">
                         <i class="bi bi-map"></i>
                     </div>
-                    <h4>Learning Roadmap</h4>
-                    <p>Get a personalized Learn → Practice → Build → Apply roadmap for every missing skill, with curated free resources.</p>
+                    <h4 data-i18n="feat_roadmap_title">Personalized Learning Roadmap</h4>
+                    <p data-i18n="feat_roadmap_desc">Receive a phased Learn → Practice → Build → Apply roadmap curated to close your identified skill gaps.</p>
                     <div class="feature-tags">
-                        <span>Free Resources</span><span>Progress Tracker</span><span>Projects</span>
+                        <span>4 Phases</span><span>Free Curated Resources</span><span>Progress Tracking</span>
                     </div>
-                    <a href="/roadmap" class="feature-link">Get Roadmap <i class="bi bi-arrow-right"></i></a>
+                    <a href="/roadmap" class="feature-link mt-auto">Build Roadmap <i class="bi bi-arrow-right"></i></a>
                 </div>
             </div>
 
-            <!-- Feature 5 -->
-            <div class="col-md-6 col-lg-4">
-                <div class="feature-card" data-feature="5">
+            <!-- Feature 5: Multi-Job Comparison -->
+            <div class="col-md-6 col-lg-6">
+                <div class="feature-card h-100" data-feature="5">
                     <div class="feature-icon-wrap" style="--icon-color:#f59e0b">
-                        <i class="bi bi-robot"></i>
-                    </div>
-                    <h4>ATS Optimization</h4>
-                    <p>Identify ATS compatibility issues before your resume gets auto-rejected. Get keyword suggestions and formatting fixes.</p>
-                    <div class="feature-tags">
-                        <span>ATS Score</span><span>Keyword Fix</span><span>Before/After</span>
-                    </div>
-                    <a href="/analysis" class="feature-link">Optimize ATS <i class="bi bi-arrow-right"></i></a>
-                </div>
-            </div>
-
-            <!-- Feature 6 -->
-            <div class="col-md-6 col-lg-4">
-                <div class="feature-card" data-feature="6">
-                    <div class="feature-icon-wrap" style="--icon-color:#ef4444">
                         <i class="bi bi-bar-chart-steps"></i>
                     </div>
-                    <h4>Multi-Job Comparison</h4>
-                    <p>Compare your resume against 8+ career profiles simultaneously. Discover which roles suit you best right now.</p>
+                    <h4 data-i18n="feat_comp_title">Multi-Job Comparison</h4>
+                    <p data-i18n="feat_comp_desc">Compare at least two real job descriptions simultaneously to determine your highest-compatibility role.</p>
                     <div class="feature-tags">
-                        <span>Bar Chart</span><span>8 Roles</span><span>Best Match</span>
+                        <span>Min. 2 Real JDs</span><span>Side-by-Side</span><span>Ranked Roles</span>
                     </div>
-                    <a href="/comparison" class="feature-link">Compare Jobs <i class="bi bi-arrow-right"></i></a>
+                    <a href="/comparison" class="feature-link mt-auto">Compare Roles <i class="bi bi-arrow-right"></i></a>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- ═══ HOW IT WORKS ═══ -->
+<!-- ═══ HOW IT WORKS SECTION ═══ -->
 <section id="how-it-works" class="how-section py-6">
     <div class="container">
         <div class="section-header text-center mb-6">
-            <span class="section-badge">Simple Process</span>
-            <h2 class="section-title">From Upload to <span class="text-gradient">Job-Ready</span></h2>
-            <p class="section-sub">Six steps to transform your career trajectory</p>
+            <span class="section-badge" data-i18n="how_badge">Simple Process</span>
+            <h2 class="section-title mt-2" data-i18n="how_title">From Upload to Job-Ready in 4 Steps</h2>
+            <p class="section-sub" data-i18n="how_subtitle">A transparent and data-driven career improvement workflow</p>
         </div>
 
         <div class="process-timeline">
-            <div class="process-step" data-step="1">
+            <!-- Step 1 -->
+            <div class="process-step">
                 <div class="step-number">01</div>
-                <div class="step-icon-wrap">
-                    <i class="bi bi-cloud-upload"></i>
-                </div>
-                <h5>Upload Resume</h5>
-                <p>Drag & drop your PDF or DOCX resume. Our parser extracts all content instantly.</p>
+                <div class="step-icon-wrap"><i class="bi bi-cloud-arrow-up-fill"></i></div>
+                <h5 data-i18n="how_step1_title">Upload Resume</h5>
+                <p data-i18n="how_step1_desc">Upload your PDF or DOCX file. Our engine parses text, sections, dates, and contact details.</p>
             </div>
-
             <div class="process-connector"><i class="bi bi-arrow-right"></i></div>
 
-            <div class="process-step" data-step="2">
+            <!-- Step 2 -->
+            <div class="process-step">
                 <div class="step-number">02</div>
-                <div class="step-icon-wrap">
-                    <i class="bi bi-cpu"></i>
-                </div>
-                <h5>AI Analysis</h5>
-                <p>NLP engine extracts skills, education, projects, and scores your resume quality.</p>
+                <div class="step-icon-wrap"><i class="bi bi-cpu-fill"></i></div>
+                <h5 data-i18n="how_step2_title">AI Deep Analysis</h5>
+                <p data-i18n="how_step2_desc">We evaluate 6 weighted categories: skills, experience metrics, formatting, education, and ATS readability.</p>
             </div>
-
             <div class="process-connector"><i class="bi bi-arrow-right"></i></div>
 
-            <div class="process-step" data-step="3">
+            <!-- Step 3 -->
+            <div class="process-step">
                 <div class="step-number">03</div>
-                <div class="step-icon-wrap">
-                    <i class="bi bi-bullseye"></i>
-                </div>
-                <h5>Match Score</h5>
-                <p>Compare your resume against your target job and see your compatibility score.</p>
+                <div class="step-icon-wrap"><i class="bi bi-bullseye"></i></div>
+                <h5 data-i18n="how_step3_title">Targeted Job Matching</h5>
+                <p data-i18n="how_step3_desc">Paste real job descriptions to reveal exact matching skills, missing requirements, and clear deductions.</p>
             </div>
-
             <div class="process-connector"><i class="bi bi-arrow-right"></i></div>
 
-            <div class="process-step" data-step="4">
+            <!-- Step 4 -->
+            <div class="process-step">
                 <div class="step-number">04</div>
-                <div class="step-icon-wrap">
-                    <i class="bi bi-radar"></i>
-                </div>
-                <h5>Skill Gap</h5>
-                <p>Visual radar chart shows exactly which skills you need to acquire or improve.</p>
-            </div>
-
-            <div class="process-connector"><i class="bi bi-arrow-right"></i></div>
-
-            <div class="process-step" data-step="5">
-                <div class="step-number">05</div>
-                <div class="step-icon-wrap">
-                    <i class="bi bi-map"></i>
-                </div>
-                <h5>Learning Roadmap</h5>
-                <p>Get a personalized roadmap with resources, projects, and progress tracking.</p>
-            </div>
-
-            <div class="process-connector"><i class="bi bi-arrow-right"></i></div>
-
-            <div class="process-step" data-step="6">
-                <div class="step-number">06</div>
-                <div class="step-icon-wrap">
-                    <i class="bi bi-rocket-takeoff"></i>
-                </div>
-                <h5>Job-Ready</h5>
-                <p>Apply with confidence to roles that match your evolved, optimized profile.</p>
+                <div class="step-icon-wrap"><i class="bi bi-rocket-takeoff-fill"></i></div>
+                <h5 data-i18n="how_step4_title">Skill Roadmap & Action</h5>
+                <p data-i18n="how_step4_desc">Follow a phased learning roadmap with curated resources and track your progress to reach job readiness.</p>
             </div>
         </div>
     </div>
 </section>
 
-<!-- ═══ ABOUT / VISION ═══ -->
-<section id="about" class="about-section py-6">
+<!-- ═══ WHY CHOOSE RESUME IQ SECTION ═══ -->
+<section id="why-choose-us" class="py-6" style="background: rgba(15, 22, 41, 0.6); border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);">
     <div class="container">
-        <div class="row align-items-center g-5">
+        <div class="section-header text-center mb-6">
+            <span class="section-badge" data-i18n="nav_why_us">Why Choose ResumeIQ</span>
+            <h2 class="section-title mt-2" data-i18n="why_title">Why Choose ResumeIQ</h2>
+            <p class="section-sub" data-i18n="why_subtitle">Traditional keyword counters vs. ResumeIQ's explainable AI engine</p>
+        </div>
+
+        <div class="row g-4 align-items-stretch">
+            <!-- Traditional Checkers -->
             <div class="col-lg-6">
-                <span class="section-badge">About ResumeIQ</span>
-                <h2 class="section-title mt-3">Built for Students &<br><span class="text-gradient">Job Seekers</span></h2>
-                <p class="text-secondary mt-3">
-                    ResumeIQ was built for Hackfest 3.0 to solve a real problem: students and freshers struggle
-                    to understand why they're not getting hired. Traditional resume checkers just count keywords.
-                </p>
-                <p class="text-secondary">
-                    We go deeper — using NLP and AI to give you <em>actionable</em>, explainable insights
-                    and a personalized roadmap to close your skill gaps.
-                </p>
-
-                <div class="about-pillars mt-4">
-                    <div class="pillar">
-                        <i class="bi bi-mortarboard-fill text-primary"></i>
-                        <div>
-                            <strong>For Students & Freshers</strong>
-                            <div class="text-secondary small">No experience needed to get started</div>
-                        </div>
+                <div class="list-card h-100 p-4 border border-secondary border-opacity-25" style="background: rgba(19, 28, 56, 0.4);">
+                    <div class="d-flex align-items-center gap-2 mb-4">
+                        <i class="bi bi-x-octagon-fill text-danger fs-3"></i>
+                        <h4 class="mb-0 text-white" data-i18n="why_col_trad">Traditional Resume Checkers</h4>
                     </div>
-                    <div class="pillar">
-                        <i class="bi bi-building text-purple"></i>
-                        <div>
-                            <strong>For Colleges & Placement Cells</strong>
-                            <div class="text-secondary small">Bulk analysis for student batches</div>
-                        </div>
-                    </div>
-                    <div class="pillar">
-                        <i class="bi bi-graph-up-arrow text-success"></i>
-                        <div>
-                            <strong>Data-Driven Insights</strong>
-                            <div class="text-secondary small">No guesswork — every score is explained</div>
-                        </div>
-                    </div>
-                </div>
-
-                <a href="/analysis" class="btn btn-primary btn-lg mt-4 px-5">
-                    <i class="bi bi-cloud-upload me-2"></i>Try It Free
-                </a>
-            </div>
-
-            <div class="col-lg-6">
-                <div class="vision-card-grid">
-                    <div class="vision-card v-blue">
-                        <div class="v-icon"><i class="bi bi-eye"></i></div>
-                        <h6>Our Vision</h6>
-                        <p>Analyze your resume. Discover your gaps. Build your skills. Become job-ready.</p>
-                    </div>
-                    <div class="vision-card v-purple">
-                        <div class="v-icon"><i class="bi bi-lightbulb"></i></div>
-                        <h6>The Problem</h6>
-                        <p>Students don't know why they fail interviews. Generic feedback doesn't help.</p>
-                    </div>
-                    <div class="vision-card v-cyan">
-                        <div class="v-icon"><i class="bi bi-patch-check"></i></div>
-                        <h6>Our Solution</h6>
-                        <p>Personalized, explainable AI analysis with step-by-step improvement plans.</p>
-                    </div>
-                    <div class="vision-card v-green">
-                        <div class="v-icon"><i class="bi bi-people"></i></div>
-                        <h6>Target Users</h6>
-                        <p>Students, freshers, career changers, and placement coordinators.</p>
-                    </div>
+                    <ul class="list-unstyled d-flex flex-column gap-3 text-secondary">
+                        <li class="d-flex align-items-start gap-2">
+                            <i class="bi bi-x-circle text-danger mt-1"></i>
+                            <span data-i18n="why_trad_1">Inflated or unrealistic 100% scores based on basic keyword stuffing</span>
+                        </li>
+                        <li class="d-flex align-items-start gap-2">
+                            <i class="bi bi-x-circle text-danger mt-1"></i>
+                            <span data-i18n="why_trad_2">Vague feedback without reasons for mark deductions</span>
+                        </li>
+                        <li class="d-flex align-items-start gap-2">
+                            <i class="bi bi-x-circle text-danger mt-1"></i>
+                            <span data-i18n="why_trad_3">Generates fake comparison data without job descriptions</span>
+                        </li>
+                        <li class="d-flex align-items-start gap-2">
+                            <i class="bi bi-x-circle text-danger mt-1"></i>
+                            <span data-i18n="why_trad_4">No action plan once skill deficiencies are pointed out</span>
+                        </li>
+                    </ul>
                 </div>
             </div>
+
+            <!-- ResumeIQ AI Platform -->
+            <div class="col-lg-6">
+                <div class="list-card h-100 p-4 border border-cyan border-opacity-50" style="background: rgba(19, 28, 56, 0.9); box-shadow: 0 10px 30px rgba(6, 182, 212, 0.15);">
+                    <div class="d-flex align-items-center gap-2 mb-4">
+                        <i class="bi bi-check-circle-fill text-cyan fs-3"></i>
+                        <h4 class="mb-0 text-white" data-i18n="why_col_resumeiq">ResumeIQ AI Platform</h4>
+                    </div>
+                    <ul class="list-unstyled d-flex flex-column gap-3 text-white">
+                        <li class="d-flex align-items-start gap-2">
+                            <i class="bi bi-check-circle-fill text-cyan mt-1"></i>
+                            <span data-i18n="why_ai_1">Balanced 6-category weighted scoring; never fabricates a 100% score</span>
+                        </li>
+                        <li class="d-flex align-items-start gap-2">
+                            <i class="bi bi-check-circle-fill text-cyan mt-1"></i>
+                            <span data-i18n="why_ai_2">Detailed deductions summary explaining why marks were lost and how to fix them</span>
+                        </li>
+                        <li class="d-flex align-items-start gap-2">
+                            <i class="bi bi-check-circle-fill text-cyan mt-1"></i>
+                            <span data-i18n="why_ai_3">Strict input validation: requires real job descriptions for genuine compatibility</span>
+                        </li>
+                        <li class="d-flex align-items-start gap-2">
+                            <i class="bi bi-check-circle-fill text-cyan mt-1"></i>
+                            <span data-i18n="why_ai_4">Dynamic Learn → Practice → Build → Apply roadmap to close every skill gap</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══ CAREER IMPACT SECTION ═══ -->
+<section id="career-impact" class="py-6">
+    <div class="container">
+        <div class="section-header text-center mb-6">
+            <span class="section-badge" data-i18n="impact_badge">Career Impact</span>
+            <h2 class="section-title mt-2" data-i18n="impact_title">Designed for Real Hiring Outcomes</h2>
+            <p class="section-sub">Empowering students, engineers, and career changers with explainable intelligence</p>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="list-card h-100 text-center p-4">
+                    <div class="display-4 fw-800 text-cyan mb-2" data-i18n="impact_stat_1_num">89%</div>
+                    <h5 class="text-white mb-2" data-i18n="impact_stat_1_label">Higher Interview Rate</h5>
+                    <p class="text-secondary small mb-0" data-i18n="impact_stat_1_desc">
+                        Candidates with quantified metrics and ATS-compliant formatting receive significantly more interview calls.
+                    </p>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="list-card h-100 text-center p-4">
+                    <div class="display-4 fw-800 text-purple mb-2" data-i18n="impact_stat_2_num">3x</div>
+                    <h5 class="text-white mb-2" data-i18n="impact_stat_2_label">Faster Skill Preparation</h5>
+                    <p class="text-secondary small mb-0" data-i18n="impact_stat_2_desc">
+                        Targeted roadmaps eliminate guesswork and direct your study time to exact missing skills.
+                    </p>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="list-card h-100 text-center p-4">
+                    <div class="display-4 fw-800 text-success mb-2" data-i18n="impact_stat_3_num">100+</div>
+                    <h5 class="text-white mb-2" data-i18n="impact_stat_3_label">Modern Tech Stacks</h5>
+                    <p class="text-secondary small mb-0" data-i18n="impact_stat_3_desc">
+                        Recognizes modern frameworks, cloud architectures, AI libraries, and databases.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mt-5">
+            <a href="/analysis" class="btn btn-primary btn-lg px-5 py-3">
+                <i class="bi bi-lightning-charge me-2"></i><span data-i18n="hero_cta_analyze">Analyze My Resume Now</span>
+            </a>
         </div>
     </div>
 </section>
 
 <!-- ═══ FOOTER ═══ -->
-<footer class="main-footer py-5">
+<footer class="main-footer py-5 border-top border-secondary border-opacity-25" style="background: #080c16;">
     <div class="container">
         <div class="row g-4">
             <div class="col-lg-4">
@@ -423,65 +459,129 @@
                     <div class="logo-icon small"><i class="bi bi-cpu-fill"></i></div>
                     <span class="logo-text">Resume<span class="text-gradient">IQ</span></span>
                 </div>
-                <p class="text-secondary small">
-                    AI-powered resume analyzer and skill gap roadmap platform.
-                    Built for Hackfest 3.0.
+                <p class="text-secondary small" data-i18n="footer_desc">
+                    AI-Powered Resume Analyzer and Career Guidance Platform built for modern candidates and engineering teams.
                 </p>
                 <div class="d-flex gap-3 mt-3">
-                    <a href="#" class="social-link"><i class="bi bi-github"></i></a>
-                    <a href="#" class="social-link"><i class="bi bi-linkedin"></i></a>
-                    <a href="#" class="social-link"><i class="bi bi-twitter-x"></i></a>
+                    <a href="https://github.com" target="_blank" class="social-link" title="GitHub"><i class="bi bi-github"></i></a>
+                    <a href="https://linkedin.com" target="_blank" class="social-link" title="LinkedIn"><i class="bi bi-linkedin"></i></a>
+                    <a href="https://twitter.com" target="_blank" class="social-link" title="Twitter"><i class="bi bi-twitter-x"></i></a>
                 </div>
             </div>
 
             <div class="col-lg-2 col-6">
-                <h6 class="text-white mb-3">Features</h6>
-                <ul class="footer-links">
-                    <li><a href="/analysis">Resume Analysis</a></li>
-                    <li><a href="/job-match">Job Match</a></li>
-                    <li><a href="/skill-gap">Skill Gap</a></li>
-                    <li><a href="/roadmap">Roadmap</a></li>
-                    <li><a href="/comparison">Job Comparison</a></li>
+                <h6 class="text-white mb-3" data-i18n="footer_quick_links">Quick Links</h6>
+                <ul class="footer-links list-unstyled small d-flex flex-column gap-2 text-secondary">
+                    <li><a href="/analysis" class="text-secondary hover-underline" data-i18n="nav_analysis">Resume Analysis</a></li>
+                    <li><a href="/job-match" class="text-secondary hover-underline" data-i18n="nav_job_match">Job Match</a></li>
+                    <li><a href="/skill-gap" class="text-secondary hover-underline" data-i18n="nav_skill_gap">Skill Gap</a></li>
+                    <li><a href="/roadmap" class="text-secondary hover-underline" data-i18n="nav_roadmap">Learning Roadmap</a></li>
+                    <li><a href="/comparison" class="text-secondary hover-underline" data-i18n="nav_comparison">Job Comparison</a></li>
                 </ul>
             </div>
 
             <div class="col-lg-2 col-6">
-                <h6 class="text-white mb-3">Career Roles</h6>
-                <ul class="footer-links">
-                    <li><a href="#">Software Developer</a></li>
-                    <li><a href="#">Web Developer</a></li>
-                    <li><a href="#">Data Analyst</a></li>
-                    <li><a href="#">ML Engineer</a></li>
-                    <li><a href="#">QA Engineer</a></li>
+                <h6 class="text-white mb-3">Platform Policy</h6>
+                <ul class="footer-links list-unstyled small d-flex flex-column gap-2 text-secondary">
+                    <li><a href="#" class="text-secondary hover-underline" data-bs-toggle="modal" data-bs-target="#aboutModal" data-i18n="footer_about">About Us</a></li>
+                    <li><a href="#" class="text-secondary hover-underline" data-bs-toggle="modal" data-bs-target="#contactModal" data-i18n="footer_contact">Contact Us</a></li>
+                    <li><a href="#" class="text-secondary hover-underline" data-bs-toggle="modal" data-bs-target="#privacyModal" data-i18n="footer_privacy">Privacy Policy</a></li>
+                    <li><a href="#" class="text-secondary hover-underline" data-bs-toggle="modal" data-bs-target="#termsModal" data-i18n="footer_terms">Terms of Service</a></li>
                 </ul>
             </div>
 
             <div class="col-lg-4">
-                <h6 class="text-white mb-3">Start Your Journey</h6>
-                <p class="text-secondary small">Upload your resume now and discover what's holding you back from your dream role.</p>
-                <a href="/analysis" class="btn btn-primary mt-2">
-                    <i class="bi bi-cloud-upload me-2"></i>Analyze My Resume
+                <h6 class="text-white mb-3">Get Started Today</h6>
+                <p class="text-secondary small">Upload your resume to discover actionable areas for improvement and unlock tailored career roadmaps.</p>
+                <a href="/register" class="btn btn-outline-primary btn-sm px-4">
+                    <i class="bi bi-person-plus me-1"></i><span data-i18n="nav_signup">Create Free Account</span>
                 </a>
             </div>
         </div>
 
-        <hr class="border-dark mt-4">
+        <hr class="border-secondary border-opacity-25 mt-4">
 
-        <div class="d-flex flex-wrap justify-content-between align-items-center">
-            <div class="text-secondary small">
-                &copy; 2024 ResumeIQ — Built for Hackfest 3.0
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div class="text-secondary small" data-i18n="footer_copyright">
+                &copy; 2026 ResumeIQ. All rights reserved.
             </div>
             <div class="text-secondary small">
-                Powered by Python • Flask • NLP • AI
+                Engineered with Python &bull; Flask &bull; NLP &bull; Explainable AI
             </div>
         </div>
     </div>
 </footer>
+
+<!-- ═══ MODALS (About, Contact, Privacy, Terms) ═══ -->
+<!-- About Modal -->
+<div class="modal fade" id="aboutModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-card border border-secondary border-opacity-25 text-white">
+            <div class="modal-header border-secondary border-opacity-25">
+                <h5 class="modal-title fw-700"><i class="bi bi-info-circle text-primary me-2"></i>About ResumeIQ</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-secondary small">
+                <p>ResumeIQ was built to revolutionize how job seekers and students approach resume optimization.</p>
+                <p>Unlike basic tools that merely count keyword repetitions, ResumeIQ evaluates 6 core dimensions including quantifiable experience, structural formatting, and true ATS tokenization accuracy.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Contact Modal -->
+<div class="modal fade" id="contactModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-card border border-secondary border-opacity-25 text-white">
+            <div class="modal-header border-secondary border-opacity-25">
+                <h5 class="modal-title fw-700"><i class="bi bi-envelope text-cyan me-2"></i>Contact ResumeIQ Support</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-secondary small">
+                <p>Have questions, feedback, or need enterprise ATS integrations?</p>
+                <div class="mb-2"><strong class="text-white">Email:</strong> support@resumeiq.ai</div>
+                <div class="mb-2"><strong class="text-white">Availability:</strong> Monday – Friday, 9:00 AM – 6:00 PM IST</div>
+                <p class="mt-3 text-muted">We reply to all inquiries within 24 business hours.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Privacy Modal -->
+<div class="modal fade" id="privacyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-card border border-secondary border-opacity-25 text-white">
+            <div class="modal-header border-secondary border-opacity-25">
+                <h5 class="modal-title fw-700"><i class="bi bi-shield-lock text-success me-2"></i>Privacy Policy</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-secondary small">
+                <p>Your privacy is paramount. Resumes uploaded to ResumeIQ are isolated strictly to your authenticated user account and are never sold or shared with third parties.</p>
+                <p>Uploaded documents can be permanently deleted at any time with cascading data removal from your dashboard.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Terms Modal -->
+<div class="modal fade" id="termsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-card border border-secondary border-opacity-25 text-white">
+            <div class="modal-header border-secondary border-opacity-25">
+                <h5 class="modal-title fw-700"><i class="bi bi-file-text text-warning me-2"></i>Terms of Service</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-secondary small">
+                <p>ResumeIQ scores represent algorithmic compatibility estimates based on leading ATS parsing methodologies. ResumeIQ does not guarantee employment offers or commercial recruiter decisions.</p>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    // Smooth scroll for navbar links
+    // Smooth scroll for nav links
     document.querySelectorAll('a[href^="#"]').forEach(a => {
         a.addEventListener('click', function(e) {
             const target = document.querySelector(this.getAttribute('href'));
@@ -495,30 +595,19 @@
     // Navbar scroll effect
     window.addEventListener('scroll', () => {
         const nav = document.getElementById('mainNav');
-        if (window.scrollY > 50) {
-            nav.classList.add('scrolled');
-        } else {
-            nav.classList.remove('scrolled');
-        }
-    });
-
-    // Animate steps on scroll
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(e => {
-            if (e.isIntersecting) {
-                e.target.classList.add('visible');
+        if (nav) {
+            if (window.scrollY > 40) {
+                nav.classList.add('scrolled');
+            } else {
+                nav.classList.remove('scrolled');
             }
-        });
-    }, { threshold: 0.1 });
-
-    document.querySelectorAll('.feature-card, .process-step, .vision-card').forEach(el => {
-        observer.observe(el);
+        }
     });
 
     // Generate particles
     const particlesContainer = document.getElementById('particles');
     if (particlesContainer) {
-        for (let i = 0; i < 30; i++) {
+        for (let i = 0; i < 25; i++) {
             const p = document.createElement('div');
             p.className = 'particle';
             p.style.cssText = `

@@ -170,6 +170,7 @@ def analyze_ats(resume_text: str, target_role: str = '') -> Dict[str, Any]:
         'recommendations': recommendations,
         'before_after_examples': before_after,
         'quick_wins': generate_quick_wins(issues),
+        'ats_disclaimer': 'ATS Compatibility Estimate: This evaluation is an algorithmic estimate modeled on leading applicant tracking systems (Workday, Greenhouse, Taleo, Lever). Real proprietary employer ATS platforms vary based on individual recruiter configurations.',
         'keyword_density': {
             'found': found_kw,
             'missing': missing_kw[:8],
@@ -179,24 +180,30 @@ def analyze_ats(resume_text: str, target_role: str = '') -> Dict[str, Any]:
 
 
 def compute_ats_score_from_issues(issues: list, word_count: int, bullet_count: int) -> float:
-    """Compute ATS score based on identified issues."""
-    score = 85.0
+    """Compute realistic ATS score based on identified issues (never automatically 100%, realistic max 92.5%)."""
+    score = 88.0
 
     for issue in issues:
         if issue['severity'] == 'high':
-            score -= 12
+            score -= 15
         elif issue['severity'] == 'medium':
-            score -= 6
+            score -= 8
         else:
-            score -= 2
+            score -= 3
 
-    if 300 <= word_count <= 900:
-        score += 5
+    if word_count < 150:
+        score -= 25
+    elif word_count < 250:
+        score -= 10
+    elif 350 <= word_count <= 850:
+        score += 3
 
     if bullet_count >= 8:
-        score += 5
+        score += 2
+    elif bullet_count == 0:
+        score -= 15
 
-    return round(max(min(score, 100), 10), 1)
+    return round(max(min(score, 92.5), 15.0), 1)
 
 
 def generate_before_after_examples(resume_text: str) -> List[Dict[str, str]]:

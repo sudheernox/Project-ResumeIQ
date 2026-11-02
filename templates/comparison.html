@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Job Comparison — Resume IQ{% endblock %}
+{% block title %}Multi-Job Comparison — Resume IQ{% endblock %}
 {% block extra_css %}<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">{% endblock %}
 
 {% block body %}
@@ -12,18 +12,18 @@
             </a>
         </div>
         <nav class="sidebar-nav">
-            <div class="nav-section-label">Main Menu</div>
-            <a href="/dashboard" class="sidebar-link"><i class="bi bi-grid-1x2"></i><span>Dashboard</span></a>
-            <a href="/analysis" class="sidebar-link"><i class="bi bi-file-earmark-text"></i><span>Resume Analysis</span></a>
-            <a href="/job-match" class="sidebar-link"><i class="bi bi-bullseye"></i><span>Job Match</span></a>
-            <a href="/skill-gap" class="sidebar-link"><i class="bi bi-radar"></i><span>Skill Gap</span></a>
-            <a href="/roadmap" class="sidebar-link"><i class="bi bi-map"></i><span>Learning Roadmap</span></a>
-            <a href="/comparison" class="sidebar-link active"><i class="bi bi-bar-chart-steps"></i><span>Job Comparison</span></a>
-            <div class="nav-section-label mt-3">Account</div>
-            <a href="/profile" class="sidebar-link"><i class="bi bi-person-circle"></i><span>User Profile</span></a>
+            <div class="nav-section-label" data-i18n="nav_main_menu">Main Menu</div>
+            <a href="/dashboard" class="sidebar-link"><i class="bi bi-grid-1x2"></i><span data-i18n="nav_dashboard">Dashboard</span></a>
+            <a href="/analysis" class="sidebar-link"><i class="bi bi-file-earmark-text"></i><span data-i18n="nav_analysis">Resume Analysis</span></a>
+            <a href="/job-match" class="sidebar-link"><i class="bi bi-bullseye"></i><span data-i18n="nav_job_match">Job Match</span></a>
+            <a href="/skill-gap" class="sidebar-link"><i class="bi bi-radar"></i><span data-i18n="nav_skill_gap">Skill Gap</span></a>
+            <a href="/roadmap" class="sidebar-link"><i class="bi bi-map"></i><span data-i18n="nav_roadmap">Learning Roadmap</span></a>
+            <a href="/comparison" class="sidebar-link active"><i class="bi bi-bar-chart-steps"></i><span data-i18n="nav_comparison">Job Comparison</span></a>
+            <div class="nav-section-label mt-3" data-i18n="nav_account">Account</div>
+            <a href="/profile" class="sidebar-link"><i class="bi bi-person-circle"></i><span data-i18n="nav_profile">User Profile</span></a>
         </nav>
         <div class="sidebar-footer">
-            <a href="/analysis" class="btn btn-primary w-100"><i class="bi bi-plus-circle me-2"></i>New Analysis</a>
+            <a href="/analysis" class="btn btn-primary w-100"><i class="bi bi-plus-circle me-2"></i><span data-i18n="nav_new_analysis">New Analysis</span></a>
         </div>
     </aside>
 
@@ -32,19 +32,27 @@
             <div class="d-flex align-items-center gap-3">
                 <button class="btn btn-icon" id="sidebarToggle"><i class="bi bi-list"></i></button>
                 <div>
-                    <h4 class="mb-0 fw-700">Multi-Job Comparison</h4>
-                    <p class="mb-0 text-secondary small">Discover which careers best match your profile</p>
+                    <h4 class="mb-0 fw-700" data-i18n="comp_header">Multi-Job Comparison</h4>
+                    <p class="mb-0 text-secondary small" data-i18n="comp_subheader">Compare at least two real job descriptions against your resume</p>
                 </div>
             </div>
-            <button class="btn btn-primary" id="compareBtn">
-                <i class="bi bi-bar-chart-steps me-1"></i>Compare All Roles
-            </button>
+            <!-- Language Switcher Dropdown in Topbar -->
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary btn-sm dropdown-toggle lang-switcher-btn d-flex align-items-center gap-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-translate text-cyan"></i>
+                    <span class="current-lang-label">English</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow">
+                    <li><a class="dropdown-item lang-select-item" href="#" data-lang="en">🇬🇧 English</a></li>
+                    <li><a class="dropdown-item lang-select-item" href="#" data-lang="hi">🇮🇳 हिन्दी (Hindi)</a></li>
+                </ul>
+            </div>
         </div>
 
         <div class="page-body">
             <div id="noResumeAlert" class="alert alert-warning d-none">
                 <i class="bi bi-exclamation-triangle me-2"></i>
-                No resume found. <a href="/analysis" class="alert-link">Upload and analyze your resume first.</a>
+                <span data-i18n="msg_upload_first">No resume found.</span> <a href="/analysis" class="alert-link">Upload and analyze your resume first.</a>
             </div>
 
             <!-- Active Resume Header -->
@@ -53,7 +61,7 @@
                     <i class="bi bi-file-earmark-person-fill text-cyan fs-4"></i>
                     <div>
                         <div class="text-white fw-700" id="compResumeFileName">—</div>
-                        <div class="text-secondary small">Active Resume evaluated across career paths</div>
+                        <div class="text-secondary small">Active Resume used for job comparison</div>
                     </div>
                 </div>
                 <a href="/analysis" class="btn btn-outline-primary btn-sm px-3">
@@ -61,37 +69,77 @@
                 </a>
             </div>
 
-            <!-- Custom Job Role Comparison Input -->
+            <!-- Job Comparison Form: Requires at least 2 real job descriptions -->
             <div class="list-card mb-4">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="mb-0 text-white"><i class="bi bi-plus-circle me-2 text-primary"></i>Add Custom Job Role for Comparison</h6>
-                    <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#customCompCollapse">
-                        <i class="bi bi-sliders me-1"></i>Custom Role Form
+                    <div>
+                        <h5 class="mb-1 text-white"><i class="bi bi-card-checklist me-2 text-primary"></i>Enter Job Descriptions to Compare</h5>
+                        <p class="text-secondary small mb-0">Provide at least two valid job descriptions to evaluate genuine compatibility against your resume.</p>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="addAnotherJobBtn">
+                        <i class="bi bi-plus-lg me-1"></i>Add Another Job
                     </button>
                 </div>
-                <div class="collapse" id="customCompCollapse">
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <label class="form-label text-secondary small">Custom Role Title</label>
-                            <input type="text" class="form-control form-control-dark" id="customCompTitle" placeholder="e.g. Solutions Architect">
+
+                <div id="jobInputsContainer" class="row g-4">
+                    <!-- Job 1 -->
+                    <div class="col-lg-6 job-input-card" data-index="1">
+                        <div class="p-3 rounded border border-secondary border-opacity-25" style="background: rgba(15, 22, 41, 0.4);">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0 text-cyan fw-600">Job Opportunity #1</h6>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label text-secondary small" data-i18n="comp_job1_title">Job 1: Role Title</label>
+                                <input type="text" class="form-control form-control-dark job-title-field" id="job1Title" placeholder="e.g. Senior Backend Engineer">
+                            </div>
+                            <div>
+                                <label class="form-label text-secondary small" data-i18n="comp_job1_desc">Job 1 Description & Requirements</label>
+                                <textarea class="form-control form-textarea-dark job-desc-field" id="job1Desc" rows="7" placeholder="Paste complete job description for Opportunity #1..."></textarea>
+                            </div>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label text-secondary small">Role Requirements / Description</label>
-                            <input type="text" class="form-control form-control-dark" id="customCompDesc" placeholder="e.g. Python, AWS, Docker, Kubernetes, microservices architecture...">
-                        </div>
-                        <div class="col-md-2 d-flex align-items-end">
-                            <button class="btn btn-primary w-100" id="addCustomCompBtn">
-                                <i class="bi bi-plus-lg me-1"></i>Add & Compare
-                            </button>
+                    </div>
+
+                    <!-- Job 2 -->
+                    <div class="col-lg-6 job-input-card" data-index="2">
+                        <div class="p-3 rounded border border-secondary border-opacity-25" style="background: rgba(15, 22, 41, 0.4);">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0 text-cyan fw-600">Job Opportunity #2</h6>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label text-secondary small" data-i18n="comp_job2_title">Job 2: Role Title</label>
+                                <input type="text" class="form-control form-control-dark job-title-field" id="job2Title" placeholder="e.g. Full Stack Cloud Developer">
+                            </div>
+                            <div>
+                                <label class="form-label text-secondary small" data-i18n="comp_job2_desc">Job 2 Description & Requirements</label>
+                                <textarea class="form-control form-textarea-dark job-desc-field" id="job2Desc" rows="7" placeholder="Paste complete job description for Opportunity #2..."></textarea>
+                            </div>
                         </div>
                     </div>
                 </div>
+
+                <div class="d-flex justify-content-end align-items-center gap-3 mt-4 pt-3 border-top border-secondary border-opacity-25">
+                    <span class="text-secondary small d-none d-md-inline"><i class="bi bi-shield-check me-1 text-cyan"></i>Requires minimum 2 valid job descriptions</span>
+                    <button class="btn btn-primary px-5 py-2 fw-600" id="compareBtn">
+                        <i class="bi bi-bar-chart-steps me-2"></i><span data-i18n="comp_btn_compare">Compare Jobs</span>
+                    </button>
+                </div>
             </div>
 
-            <!-- Loading -->
-            <div id="compLoading" class="text-center py-4" style="display:none">
+            <!-- Loading Spinner -->
+            <div id="compLoading" class="text-center py-5" style="display:none">
                 <div class="analysis-loading-ring"></div>
-                <p class="mt-3 text-secondary">Comparing your profile against 8 career roles...</p>
+                <p class="mt-3 text-secondary">Analyzing and comparing jobs against your resume...</p>
+            </div>
+
+            <!-- Empty state when no comparison has been conducted -->
+            <div id="compEmptyState" class="list-card text-center py-5 mb-4">
+                <div class="mb-3">
+                    <i class="bi bi-bar-chart-steps text-cyan display-5"></i>
+                </div>
+                <h5 class="text-white fw-700" data-i18n="comp_empty_title">At Least Two Job Descriptions Required</h5>
+                <p class="text-secondary small mx-auto" style="max-width: 520px;" data-i18n="comp_empty_desc">
+                    Please enter at least two valid job descriptions above to perform a comparative analysis. We do not generate results from empty inputs or placeholder data.
+                </p>
             </div>
 
             <!-- Results -->
@@ -99,7 +147,7 @@
 
                 <!-- Best Match Hero -->
                 <div class="best-match-card mb-4" id="bestMatchCard">
-                    <div class="bm-label"><i class="bi bi-trophy-fill text-warning me-2"></i>Best Career Match for You</div>
+                    <div class="bm-label"><i class="bi bi-trophy-fill text-warning me-2"></i><span data-i18n="comp_best_match">Best Career Match for You</span></div>
                     <div class="bm-role" id="bm-role">—</div>
                     <div class="bm-score" id="bm-score">—% match</div>
                     <div class="bm-msg" id="bm-msg">—</div>
@@ -108,16 +156,16 @@
                 <!-- Bar chart -->
                 <div class="chart-card mb-4">
                     <div class="chart-card-header">
-                        <h6><i class="bi bi-bar-chart me-2 text-primary"></i>Job Compatibility Comparison</h6>
-                        <span class="text-secondary small">Based on your resume skills</span>
+                        <h6><i class="bi bi-bar-chart me-2 text-primary"></i>Comparative Job Compatibility Breakdown</h6>
+                        <span class="text-secondary small">Ranked by overall match percentage</span>
                     </div>
                     <div class="chart-container" style="height:350px">
                         <canvas id="compBarChart"></canvas>
                     </div>
                 </div>
 
-                <!-- Role cards -->
-                <div class="row g-3" id="roleCards"></div>
+                <!-- Detailed Role comparison cards -->
+                <div class="row g-3 mb-4" id="roleCards"></div>
 
             </div>
         </div>

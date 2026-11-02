@@ -517,23 +517,32 @@ def auth_forgot_password():
 
         email_status = send_password_reset_email(user.email, reset_url)
 
-        response_payload = {
-            'success': True,
-            'message': generic_message
-        }
+        # If email was actually sent through SMTP / Gmail
+        if email_status.get('sent'):
+            return jsonify({
+                'success': True,
+                'email_sent': True,
+                'message': f'A password reset link has been dispatched to {user.email}. Please check your inbox and spam folder.'
+            })
 
+        # If SMTP is not yet configured in environment variables
         if not email_status.get('configured'):
-            response_payload['notice'] = (
-                'Note: SMTP credentials are not yet configured in your environment (.env). '
-                'In production, configure SMTP_SERVER, SMTP_PORT, SMTP_USERNAME, and SMTP_PASSWORD.'
-            )
-            # When SMTP is unconfigured or in development/testing, supply dev link for smooth local testing
-            if app.debug or app.config.get('TESTING') or app.config.get('ENV') == 'development' or not email_status.get('configured'):
+            response_payload = {
+                'success': True,
+                'email_sent': False,
+                'message': generic_message,
+                'notice': email_status.get('error', 'SMTP credentials not configured.')
+            }
+            if app.debug or app.config.get('TESTING') or app.config.get('ENV') == 'development':
                 response_payload['dev_reset_url'] = reset_url
-                if app.config.get('TESTING') or app.debug:
-                    response_payload['token'] = token
+                response_payload['token'] = token
+            return jsonify(response_payload)
 
-        return jsonify(response_payload)
+        # If SMTP IS configured, but sending failed: report genuine error clearly
+        return jsonify({
+            'error': f"Failed to send email to {user.email}: {email_status.get('error')}",
+            'email_sent': False
+        }), 500
     except Exception as e:
         db.session.rollback()
         traceback.print_exc()
@@ -779,8 +788,13 @@ def analyze_resume_api():
 
         # Generative AI insights or structured NLP insights
         ai_insights = get_ai_insights(parsed['raw_text'], result)
-        if not ai_insights:
-            ai_insights = generate_nlp_insights(result)
+        if not ai_insights or not isinstance(ai_insights, dict):
+            ai_insights = generate_nlp_insights(result) or {}
+
+        # Embed transparent category breakdown, deductions, and ATS disclaimer
+        ai_insights['category_scores'] = result.get('category_scores', {})
+        ai_insights['deductions_summary'] = result.get('deductions_summary', [])
+        ai_insights['ats_disclaimer'] = result.get('ats_disclaimer', '')
 
         # Save analysis to database bound to user
         analysis_record = ResumeAnalysis(
@@ -824,6 +838,9 @@ def analyze_resume_api():
             'recommendations': result['recommendations'],
             'keywords_found': result['keywords_found'],
             'total_skills': result['total_skills'],
+            'category_scores': result.get('category_scores', {}),
+            'deductions_summary': result.get('deductions_summary', []),
+            'ats_disclaimer': result.get('ats_disclaimer', ''),
             'ai_insights': ai_insights,
         })
 
@@ -869,8 +886,8 @@ def job_match_api():
 
     if not resume:
         return jsonify({'error': 'No resume found. Please upload a resume first.'}), 400
-    if not job_description and not job_role:
-        return jsonify({'error': 'Please provide a job title/role or paste a job description.'}), 400
+    if not job_description or len(job_description) < 15:
+        return jsonify({'error': 'Please upload or paste a job description to access this feature.'}), 400
 
     try:
         resume_text = resume.text_content or ''
@@ -880,12 +897,7 @@ def job_match_api():
             resume.text_content = resume_text
             db.session.commit()
 
-        # If no JD provided but role selected, use role profile as JD
-        if not job_description and job_role in ROLE_PROFILES:
-            profile = ROLE_PROFILES[job_role]
-            job_description = ' '.join(profile['required'] + profile['preferred'] + profile['soft'])
-
-        result = match_resume_to_job(resume_text, job_description, job_role)
+        result = match_resume_to_job(resume_text, job_description, job_role or 'Target Job')
 
         # Save to database bound to user
         match_record = JobMatch(
@@ -1041,19 +1053,25 @@ def generate_roadmap_api():
         return jsonify({'error': 'No resume found. Please upload a resume first.'}), 400
 
     try:
-        # If no missing skills provided, derive from user's latest skill gap or compute
+        # If no missing skills provided, derive from job description, latest skill gap, or compute
         if not missing_skills:
-            gap = SkillGap.query.filter_by(resume_id=resume.id, user_id=user_id, career_role=career_role).order_by(
-                SkillGap.analysis_time.desc()).first()
-            if gap:
-                missing_skills = json.loads(gap.missing_technical or '[]') + json.loads(gap.missing_soft or '[]')
-            else:
+            job_desc = (data.get('job_description') or '').strip()
+            if job_desc:
                 resume_text = resume.text_content or ''
-                gap_result = compute_skill_gap(resume_text, career_role)
-                missing_skills = gap_result.get('missing_technical', []) + gap_result.get('missing_soft', [])
+                match_res = match_resume_to_job(resume_text, job_desc, career_role)
+                missing_skills = match_res.get('missing_skills', [])
+            else:
+                gap = SkillGap.query.filter_by(resume_id=resume.id, user_id=user_id, career_role=career_role).order_by(
+                    SkillGap.analysis_time.desc()).first()
+                if gap:
+                    missing_skills = json.loads(gap.missing_technical or '[]') + json.loads(gap.missing_soft or '[]')
+                elif career_role:
+                    resume_text = resume.text_content or ''
+                    gap_result = compute_skill_gap(resume_text, career_role)
+                    missing_skills = gap_result.get('missing_technical', []) + gap_result.get('missing_soft', [])
 
         if not missing_skills:
-            missing_skills = ['Git', 'Data Structures', 'SQL', 'Docker']
+            return jsonify({'error': 'No missing skills identified. Please upload or paste a job description to generate a learning roadmap.'}), 400
 
         result = generate_roadmap(missing_skills[:12], career_role)
 
@@ -1175,9 +1193,18 @@ def compare_jobs_api():
     resume = get_active_resume(requested_id, user_id=user_id)
     selected_roles = data.get('roles', [])
     custom_roles = data.get('custom_roles', [])
+    jobs = data.get('jobs', [])
 
     if not resume:
         return jsonify({'error': 'No resume found. Please upload a resume first.'}), 400
+
+    # Strict validation: Require at least two valid job inputs for comparison
+    if jobs:
+        valid_jobs = [j for j in jobs if (j.get('title') or j.get('role')) and len(j.get('description', '').strip()) >= 15]
+        if len(valid_jobs) < 2:
+            return jsonify({'error': 'Please provide at least two valid job descriptions for comparison.'}), 400
+    elif not selected_roles and not custom_roles:
+        return jsonify({'error': 'Please provide at least two valid job descriptions for comparison.'}), 400
 
     try:
         resume_text = resume.text_content or ''
@@ -1187,7 +1214,12 @@ def compare_jobs_api():
             resume.text_content = resume_text
             db.session.commit()
 
-        results = compare_multiple_jobs(resume_text, selected_roles or None, custom_roles or None)
+        results = compare_multiple_jobs(
+            resume_text,
+            job_roles=selected_roles or None,
+            custom_roles=custom_roles or None,
+            jobs=jobs or None
+        )
         best = results[0] if results else None
 
         # Save to database bound to user

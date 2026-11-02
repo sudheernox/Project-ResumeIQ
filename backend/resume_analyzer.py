@@ -254,155 +254,428 @@ def extract_tech_from_line(line: str) -> List[str]:
 
 
 def score_resume(parsed: dict, sections: dict, skills: dict) -> Dict[str, Any]:
-    """Compute individual section scores and overall quality score."""
+    """
+    Compute a balanced, realistic resume quality score across 6 weighted categories:
+    1. Skills & Keyword Relevance: 25%
+    2. Experience & Achievements: 20%
+    3. Resume Formatting & Structure: 20%
+    4. Education & Projects: 15%
+    5. ATS Readability & Parsing Compatibility: 15%
+    6. Contact Information & Completeness: 5%
+
+    Rules:
+    - Never automatically give 100%. Max realistic score capped at 93.5%.
+    - A badly formatted resume receives an appropriately low score (30-50%).
+    - Show category-wise scores with explicit deductions and improvement suggestions.
+    """
     text = parsed.get('raw_text', '')
     word_count = parsed.get('word_count', 0)
-    contact = parsed.get('contact', {})
+    contact = parsed.get('contact') or {
+        'email': parsed.get('email', ''),
+        'phone': parsed.get('phone', ''),
+        'linkedin': parsed.get('linkedin', ''),
+        'github': parsed.get('github', '')
+    }
+    text_lower = text.lower()
 
-    # --- Contact / Header Score ---
-    contact_score = 0
-    if contact.get('email'):
-        contact_score += 30
-    if contact.get('phone'):
-        contact_score += 30
-    if contact.get('linkedin'):
-        contact_score += 20
-    if contact.get('github'):
-        contact_score += 20
-    contact_score = min(contact_score, 100)
+    tech_skills = skills.get('technical', [])
+    soft_skills = skills.get('soft', [])
 
-    # --- Education Score ---
-    education_score = 0
-    edu_text = sections.get('education', '')
-    if edu_text:
-        education_score = 50
-        if any(kw in edu_text.lower() for kw in ['cgpa', 'gpa', 'percentage', '%']):
-            education_score += 25
-        if extract_year(edu_text):
-            education_score += 25
-    education_score = min(education_score, 100)
+    # ─────────────────────────────────────────────────────────────────────────────
+    # Category 1: Skills & Keyword Relevance (Weight: 25%)
+    # ─────────────────────────────────────────────────────────────────────────────
+    skills_score = 0.0
+    skills_deductions = []
+    skills_suggestions = []
 
-    # --- Skills Score ---
-    tech_count = len(skills.get('technical', []))
-    soft_count = len(skills.get('soft', []))
-    skills_score = min(tech_count * 5, 70) + min(soft_count * 5, 30)
-    skills_score = min(skills_score, 100)
+    tech_count = len(tech_skills)
+    if tech_count == 0:
+        skills_score = 15.0
+        skills_deductions.append("No technical skills detected in resume (-35 pts)")
+        skills_suggestions.append("Add a dedicated Skills section detailing your programming languages, tools, and platforms.")
+    elif tech_count <= 3:
+        skills_score = 45.0
+        skills_deductions.append(f"Only {tech_count} technical skills identified (-20 pts)")
+        skills_suggestions.append("Expand technical competencies to include relevant frameworks, libraries, and tools.")
+    elif tech_count <= 7:
+        skills_score = 70.0
+        skills_deductions.append(f"Found {tech_count} technical skills; target roles typically expect 8-15 (-10 pts)")
+        skills_suggestions.append("Incorporate databases, cloud providers, and DevOps/testing tools into your skills inventory.")
+    elif tech_count <= 14:
+        skills_score = 86.0
+    else:
+        skills_score = 92.0
 
-    # --- Experience Score ---
-    experience_score = 0
-    exp_text = sections.get('experience', '')
-    if exp_text:
-        experience_score = 40
-        bullets = len(re.findall(r'[•\-\*▪]', exp_text))
-        experience_score += min(bullets * 5, 40)
-        if re.search(r'\b(19|20)\d{2}\b', exp_text):
-            experience_score += 20
-    experience_score = min(experience_score, 100)
+    soft_count = len(soft_skills)
+    if soft_count == 0:
+        skills_score -= 8.0
+        skills_deductions.append("No professional soft skills found (-8 pts)")
+        skills_suggestions.append("Highlight soft skills such as leadership, cross-functional collaboration, or problem solving.")
+    else:
+        skills_score += min(soft_count * 2.0, 8.0)
 
-    # --- Projects Score ---
-    projects_score = 0
-    proj_text = sections.get('projects', '')
-    if proj_text:
-        projects_score = 40
-        projects_score += min(len(extract_tech_from_line(proj_text)) * 5, 40)
-        if len(proj_text.split('\n')) > 3:
-            projects_score += 20
-    projects_score = min(projects_score, 100)
-
-    # --- Keywords Score ---
-    high_value_keywords = [
+    action_words = [
         'developed', 'implemented', 'designed', 'built', 'created', 'led',
         'managed', 'optimized', 'improved', 'achieved', 'deployed', 'integrated',
-        'automated', 'analyzed', 'collaborated', 'delivered', 'increased', 'reduced',
+        'automated', 'analyzed', 'collaborated', 'spearheaded', 'architected', 'orchestrated'
     ]
-    text_lower = text.lower()
-    keyword_hits = sum(1 for kw in high_value_keywords if kw in text_lower)
-    keywords_score = min(keyword_hits * 7, 100)
+    verb_hits = sum(1 for w in action_words if w in text_lower)
+    if verb_hits < 3:
+        skills_score -= 10.0
+        skills_deductions.append("Low action verb density across bullet points (-10 pts)")
+        skills_suggestions.append("Begin accomplishment statements with impactful action verbs (e.g., Engineered, Spearheaded, Automated).")
 
-    # --- ATS Score ---
-    ats_score = compute_ats_score(text, sections, skills, contact)
+    weak_verbs = ['worked on', 'worked', 'helped with', 'helped', 'assisted', 'did', 'made', 'involved in', 'responsible for']
+    weak_found = [w for w in weak_verbs if re.search(r'\b' + re.escape(w) + r'\b', text_lower)]
+    if weak_found:
+        pen = min(len(weak_found) * 3, 9)
+        skills_score -= pen
+        skills_deductions.append(f"Passive language detected: {', '.join(weak_found[:3])} (-{pen} pts)")
+        skills_suggestions.append("Replace passive phrases ('responsible for', 'worked on') with dynamic action verbs.")
 
-    # --- Formatting Score ---
-    formatting_score = compute_formatting_score(text, word_count, sections)
+    skills_score = max(min(skills_score, 94.0), 10.0)
 
-    # --- Overall Score (weighted) ---
-    overall_score = (
-        contact_score * 0.08 +
-        education_score * 0.12 +
-        skills_score * 0.20 +
-        experience_score * 0.25 +
-        projects_score * 0.15 +
-        keywords_score * 0.10 +
-        ats_score * 0.10
+    # ─────────────────────────────────────────────────────────────────────────────
+    # Category 2: Experience & Achievements (Weight: 20%)
+    # ─────────────────────────────────────────────────────────────────────────────
+    exp_text = sections.get('experience', '')
+    if not exp_text or len(exp_text.strip()) < 30:
+        # Fallback to search in raw_text if experience keywords exist
+        if 'experience' in text_lower or 'work history' in text_lower or 'employment' in text_lower:
+            exp_text = text
+
+    exp_score = 0.0
+    exp_deductions = []
+    exp_suggestions = []
+
+    if not exp_text or len(exp_text.strip()) < 30:
+        exp_score = 25.0
+        exp_deductions.append("Dedicated Work Experience or Internship section is missing or empty (-50 pts)")
+        exp_suggestions.append("Add relevant work experience, internships, freelance projects, or leadership roles.")
+    else:
+        exp_score = 45.0
+        # Quantifiable achievements
+        metric_matches = re.findall(
+            r'(\d+(?:\.\d+)?%|\$\d+(?:\.\d+)?(?:[MBk])?|\b\d+x\b|\b\d+(?:,\d+)?\s*(?:users|clients|requests|ms|seconds|engineers|customers|transactions|million|billion)\b|\b\d{2,}\+?\b)',
+            exp_text, re.IGNORECASE
+        )
+        if len(metric_matches) == 0:
+            exp_deductions.append("No quantifiable metrics, percentages, or measurable outcomes found in experience (-30 pts)")
+            exp_suggestions.append("Quantify achievements (e.g., 'Improved query performance by 40%', 'Supported 10,000+ monthly active users').")
+        elif len(metric_matches) <= 2:
+            exp_score += 20.0
+            exp_deductions.append("Few quantifiable metrics in experience bullets (-10 pts)")
+            exp_suggestions.append("Add measurable outcomes to additional bullet points to prove tangible business value.")
+        else:
+            exp_score += 35.0
+
+        bullets_exp = len(re.findall(r'[•\-\*▪]', exp_text))
+        if bullets_exp < 2:
+            exp_score -= 10.0
+            exp_deductions.append("Experience section lacks structured bullet point depth (-10 pts)")
+            exp_suggestions.append("Organize work responsibilities into 3-5 concise, outcome-focused bullet points per role.")
+        else:
+            exp_score += 10.0
+
+        if re.search(r'\b(19|20)\d{2}\b', exp_text):
+            exp_score += 5.0
+        else:
+            exp_deductions.append("Employment dates / tenure timeline missing or ambiguous (-8 pts)")
+            exp_suggestions.append("Include clear start and end dates (Month/Year) for each position.")
+
+    exp_score = max(min(exp_score, 93.0), 15.0)
+
+    # ─────────────────────────────────────────────────────────────────────────────
+    # Category 3: Resume Formatting & Structure (Weight: 20%)
+    # ─────────────────────────────────────────────────────────────────────────────
+    form_score = 90.0
+    form_deductions = []
+    form_suggestions = []
+
+    for s_name in ['experience', 'education', 'skills', 'projects']:
+        if not sections.get(s_name):
+            form_score -= 15.0
+            form_deductions.append(f"Missing standard '{s_name.title()}' section header (-15 pts)")
+            form_suggestions.append(f"Create a clear, dedicated '{s_name.title()}' section header.")
+
+    if not sections.get('objective'):
+        form_score -= 5.0
+        form_deductions.append("Missing Professional Summary or Career Objective (-5 pts)")
+        form_suggestions.append("Add a 2-3 line Professional Summary at the top summarizing your core expertise and career goals.")
+
+    if word_count < 150:
+        form_score -= 35.0
+        form_deductions.append(f"Resume text is critically brief ({word_count} words; aim for 400-800 words) (-35 pts)")
+        form_suggestions.append("Expand your resume with project details, accomplishments, and skills to provide sufficient signal for recruiters.")
+    elif word_count < 250:
+        form_score -= 15.0
+        form_deductions.append(f"Resume length is below ideal threshold ({word_count} words) (-15 pts)")
+        form_suggestions.append("Elaborate on your project implementations and role contributions to reach 450-700 words.")
+    elif word_count > 1200:
+        form_score -= 10.0
+        form_deductions.append(f"Resume is lengthy ({word_count} words; consider trimming to 1-2 pages) (-10 pts)")
+        form_suggestions.append("Condense older roles and remove secondary details to keep within 1-2 pages.")
+
+    tot_bullets = len(re.findall(r'[•\-\*▪]', text))
+    if tot_bullets == 0:
+        form_score -= 20.0
+        form_deductions.append("No bullet points detected across resume (-20 pts)")
+        form_suggestions.append("Use standard bullet points (•) for experience and project entries instead of dense paragraphs.")
+    elif tot_bullets < 4:
+        form_score -= 10.0
+        form_deductions.append(f"Sparse bullet point usage ({tot_bullets} bullets detected) (-10 pts)")
+        form_suggestions.append("Structure role responsibilities and project features into bullet lists.")
+
+    pipes_count = text.count('|')
+    if pipes_count > 10:
+        form_score -= 5.0
+        form_deductions.append("Excessive pipe (|) delimiters may cause text flow merging in certain ATS parsers (-5 pts)")
+        form_suggestions.append("Use tabs, commas, or bullet characters instead of frequent pipe symbols.")
+
+    form_score = max(min(form_score, 93.0), 15.0)
+
+    # ─────────────────────────────────────────────────────────────────────────────
+    # Category 4: Education & Projects (Weight: 15%)
+    # ─────────────────────────────────────────────────────────────────────────────
+    edu_proj_score = 0.0
+    edu_deductions = []
+    edu_suggestions = []
+
+    edu_text = sections.get('education', '')
+    if edu_text:
+        edu_proj_score += 20.0
+        if re.search(r'(b\.?tech|bachelor|b\.?e|b\.?s|master|m\.?tech|m\.?s|phd|diploma|associate|degree)', edu_text, re.IGNORECASE):
+            edu_proj_score += 15.0
+        else:
+            edu_deductions.append("Degree name/level not clearly recognizable (-15 pts)")
+            edu_suggestions.append("Explicitly state degree type (e.g. 'Bachelor of Technology in Computer Science').")
+
+        if re.search(r'(university|college|institute|school|academy)', edu_text, re.IGNORECASE):
+            edu_proj_score += 10.0
+        else:
+            edu_deductions.append("Institution / university name missing or ambiguous (-10 pts)")
+            edu_suggestions.append("Clearly specify university or accredited institution name.")
+
+        if re.search(r'\b(19|20)\d{2}\b', edu_text):
+            edu_proj_score += 10.0
+        else:
+            edu_deductions.append("Graduation year or date range missing (-5 pts)")
+            edu_suggestions.append("Add graduation year or expected graduation date.")
+    else:
+        edu_deductions.append("Missing Education section (-35 pts)")
+        edu_suggestions.append("Add an Education section with your degree, institution, and graduation year.")
+
+    proj_text = sections.get('projects', '')
+    if proj_text:
+        edu_proj_score += 25.0
+        if len(proj_text.split('\n')) > 3:
+            edu_proj_score += 15.0
+    else:
+        edu_deductions.append("Missing Projects section (-30 pts)")
+        edu_suggestions.append("Include 2-3 personal or professional projects demonstrating practical implementation of your skills.")
+
+    edu_proj_score = max(min(edu_proj_score, 94.0), 10.0)
+
+    # ─────────────────────────────────────────────────────────────────────────────
+    # Category 5: ATS Readability & Parsing Compatibility (Weight: 15%)
+    # ─────────────────────────────────────────────────────────────────────────────
+    ats_score = 90.0
+    ats_deductions = []
+    ats_suggestions = []
+
+    sym_count = len(re.findall(r'[★☆✓✗→←↑↓►◄●○■□]', text))
+    if sym_count > 0:
+        pen = min(sym_count * 5, 25)
+        ats_score -= pen
+        ats_deductions.append(f"Special symbols/icons ({sym_count} symbols) break ATS tokenizers (-{pen} pts)")
+        ats_suggestions.append("Remove decorative symbols, stars, and graphic checkmarks; use standard text bullets (•).")
+
+    missing_core = [s for s in ['experience', 'education', 'skills'] if not sections.get(s)]
+    if missing_core:
+        pen = len(missing_core) * 8
+        ats_score -= pen
+        ats_deductions.append(f"Core ATS indexing sections missing: {', '.join(missing_core)} (-{pen} pts)")
+        ats_suggestions.append("Include standard section headings that ATS indexers rely on.")
+
+    lines = [l.strip() for l in text.split('\n') if l.strip()]
+    if lines:
+        frag_lines = sum(1 for l in lines if len(l.split()) <= 2)
+        if len(lines) >= 20 and frag_lines / len(lines) > 0.45:
+            ats_score -= 15.0
+            ats_deductions.append("Fragmented line layout detected (likely multi-column or text boxes) (-15 pts)")
+            ats_suggestions.append("Adopt a single-column, left-aligned layout without text boxes or tables for ATS compatibility.")
+
+    non_ascii = len(re.findall(r'[^\x00-\x7F]', text))
+    if non_ascii > 10:
+        ats_score -= 5.0
+        ats_deductions.append("Non-standard character encoding detected (-5 pts)")
+        ats_suggestions.append("Save resume in standard UTF-8 text encoding without non-printable glyphs.")
+
+    ats_score = max(min(ats_score, 92.5), 15.0)
+
+    # ─────────────────────────────────────────────────────────────────────────────
+    # Category 6: Contact Information & Completeness (Weight: 5%)
+    # ─────────────────────────────────────────────────────────────────────────────
+    contact_score = 100.0
+    contact_deductions = []
+    contact_suggestions = []
+
+    if not contact.get('email'):
+        contact_score -= 35.0
+        contact_deductions.append("Professional email address missing (-35 pts)")
+        contact_suggestions.append("Place your professional email address prominently at the top header.")
+    if not contact.get('phone'):
+        contact_score -= 25.0
+        contact_deductions.append("Contact phone number missing (-25 pts)")
+        contact_suggestions.append("Add a valid phone number with country/area code in the header.")
+    if not contact.get('linkedin'):
+        contact_score -= 20.0
+        contact_deductions.append("LinkedIn profile URL missing (-20 pts)")
+        contact_suggestions.append("Include a link to your active LinkedIn profile.")
+    if not contact.get('github') and any(s in str(tech_skills).lower() for s in ['python', 'java', 'react', 'git', 'sql']):
+        contact_score -= 20.0
+        contact_deductions.append("GitHub profile link missing for technical profile (-20 pts)")
+        contact_suggestions.append("Add your GitHub profile URL to showcase open-source work and repositories.")
+
+    contact_score = max(min(contact_score, 100.0), 10.0)
+
+    # ─────────────────────────────────────────────────────────────────────────────
+    # Composite Overall Score (Weighted)
+    # ─────────────────────────────────────────────────────────────────────────────
+    raw_overall = (
+        skills_score * 0.25 +
+        exp_score * 0.20 +
+        form_score * 0.20 +
+        edu_proj_score * 0.15 +
+        ats_score * 0.15 +
+        contact_score * 0.05
     )
-    overall_score = round(min(overall_score, 100), 1)
+
+    # Never automatically give 100%; cap realistic max at 93.5%
+    overall = min(round(raw_overall, 1), 93.5)
+
+    category_scores = {
+        'skills_relevance': {
+            'name': 'Skills & Keyword Relevance',
+            'weight': 25,
+            'score': round(skills_score, 1),
+            'deductions': skills_deductions,
+            'suggestions': skills_suggestions,
+        },
+        'experience_achievements': {
+            'name': 'Experience & Achievements',
+            'weight': 20,
+            'score': round(exp_score, 1),
+            'deductions': exp_deductions,
+            'suggestions': exp_suggestions,
+        },
+        'formatting_structure': {
+            'name': 'Resume Formatting & Structure',
+            'weight': 20,
+            'score': round(form_score, 1),
+            'deductions': form_deductions,
+            'suggestions': form_suggestions,
+        },
+        'education_projects': {
+            'name': 'Education & Projects',
+            'weight': 15,
+            'score': round(edu_proj_score, 1),
+            'deductions': edu_deductions,
+            'suggestions': edu_suggestions,
+        },
+        'ats_compatibility': {
+            'name': 'ATS Readability & Parsing',
+            'weight': 15,
+            'score': round(ats_score, 1),
+            'deductions': ats_deductions,
+            'suggestions': ats_suggestions,
+        },
+        'contact_completeness': {
+            'name': 'Contact Information & Completeness',
+            'weight': 5,
+            'score': round(contact_score, 1),
+            'deductions': contact_deductions,
+            'suggestions': contact_suggestions,
+        },
+    }
+
+    all_deductions = (
+        skills_deductions + exp_deductions + form_deductions +
+        edu_deductions + ats_deductions + contact_deductions
+    )
+
+    keywords_score = min(verb_hits * 12.0, 92.0)
 
     return {
-        'overall': overall_score,
-        'contact': round(contact_score, 1),
-        'education': round(education_score, 1),
+        'overall': overall,
         'skills': round(skills_score, 1),
-        'experience': round(experience_score, 1),
-        'projects': round(projects_score, 1),
-        'keywords': round(keywords_score, 1),
+        'experience': round(exp_score, 1),
+        'formatting': round(form_score, 1),
+        'education': round(edu_proj_score, 1),
+        'projects': round(edu_proj_score, 1),
+        'education_projects': round(edu_proj_score, 1),
         'ats': round(ats_score, 1),
-        'formatting': round(formatting_score, 1),
+        'contact': round(contact_score, 1),
+        'keywords': round(keywords_score, 1),
+        'category_scores': category_scores,
+        'deductions_summary': all_deductions,
+        'ats_disclaimer': 'ATS Compatibility Estimate: This evaluation is an algorithmic estimate modeled on leading applicant tracking systems (Workday, Greenhouse, Taleo, Lever). Real proprietary employer ATS platforms vary based on individual recruiter configurations.',
     }
 
 
 def compute_ats_score(text: str, sections: dict, skills: dict, contact: dict) -> float:
-    """Compute ATS compatibility score."""
-    score = 50  # baseline
+    """Compute ATS compatibility score with realistic constraints (capped at 92.5)."""
+    score = 90.0
 
-    # Section headers present
-    for section in ['education', 'experience', 'skills', 'projects']:
-        if sections.get(section):
-            score += 8
+    # Penalize for missing core sections
+    missing = [s for s in ['experience', 'education', 'skills'] if not sections.get(s)]
+    score -= len(missing) * 10
+
+    # Check symbols
+    sym_count = len(re.findall(r'[★☆✓✗→←↑↓►◄●○■□]', text))
+    if sym_count > 0:
+        score -= min(sym_count * 4, 25)
+
+    # Check word count
+    word_count = len(text.split())
+    if word_count < 150:
+        score -= 30
+    elif word_count < 250:
+        score -= 15
 
     # Contact info
-    if contact.get('email'):
-        score += 5
-    if contact.get('phone'):
-        score += 5
+    if not contact.get('email'):
+        score -= 10
+    if not contact.get('phone'):
+        score -= 10
 
-    # Skills listed
-    if len(skills.get('technical', [])) >= 5:
-        score += 10
-
-    # Word count — ATS wants 300-800 words ideally
-    word_count = len(text.split())
-    if 300 <= word_count <= 1000:
-        score += 10
-    elif word_count < 150:
-        score -= 20
-
-    # Penalize for symbols that confuse ATS
-    symbol_count = len(re.findall(r'[★☆✓✗→←↑↓]', text))
-    score -= min(symbol_count * 2, 15)
-
-    return round(max(min(score, 100), 0), 1)
+    return round(max(min(score, 92.5), 15.0), 1)
 
 
 def compute_formatting_score(text: str, word_count: int, sections: dict) -> float:
-    """Compute a formatting quality score."""
-    score = 40
+    """Compute formatting quality score with realistic penalties."""
+    score = 90.0
 
-    # Has reasonable length
-    if 200 <= word_count <= 1000:
-        score += 20
-    elif word_count > 100:
-        score += 10
+    # Core sections
+    missing = [s for s in ['experience', 'education', 'skills', 'projects'] if not sections.get(s)]
+    score -= len(missing) * 12
 
-    # Multiple sections
-    section_count = sum(1 for s in ['education', 'experience', 'skills', 'projects', 'certifications']
-                        if sections.get(s))
-    score += section_count * 6
+    # Length
+    if word_count < 150:
+        score -= 30
+    elif word_count < 250:
+        score -= 15
+    elif word_count > 1200:
+        score -= 10
 
-    # Lines with bullet points
-    bullets = len(re.findall(r'^[\s]*[•\-\*▪]', text, re.MULTILINE))
-    score += min(bullets * 2, 20)
+    # Bullets
+    bullets = len(re.findall(r'[•\-\*▪]', text))
+    if bullets == 0:
+        score -= 20
+    elif bullets < 4:
+        score -= 10
 
-    return round(min(score, 100), 1)
+    return round(max(min(score, 93.0), 15.0), 1)
 
 
 def generate_strengths(skills: dict, sections: dict, scores: dict) -> List[str]:
@@ -504,7 +777,12 @@ def analyze_resume(parsed: dict) -> dict:
     """
     text = parsed.get('raw_text', '')
     sections = parsed.get('sections', {})
-    contact = parsed.get('contact', {})
+    contact = parsed.get('contact') or {
+        'email': parsed.get('email', ''),
+        'phone': parsed.get('phone', ''),
+        'linkedin': parsed.get('linkedin', ''),
+        'github': parsed.get('github', '')
+    }
 
     skills = extract_skills(text)
     education = extract_education(text, sections)
@@ -525,6 +803,9 @@ def analyze_resume(parsed: dict) -> dict:
 
     return {
         'scores': scores,
+        'category_scores': scores.get('category_scores', {}),
+        'deductions_summary': scores.get('deductions_summary', []),
+        'ats_disclaimer': scores.get('ats_disclaimer', ''),
         'technical_skills': skills['technical'],
         'soft_skills': skills['soft'],
         'education': education,

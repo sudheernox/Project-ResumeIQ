@@ -36,9 +36,20 @@
             <div class="d-flex align-items-center gap-3">
                 <button class="btn btn-icon" id="sidebarToggle"><i class="bi bi-list"></i></button>
                 <div>
-                    <h4 class="mb-0 fw-700">Resume Analysis</h4>
+                    <h4 class="mb-0 fw-700" data-i18n="nav_analysis">Resume Analysis</h4>
                     <p class="mb-0 text-secondary small">Upload and analyze your resume with AI</p>
                 </div>
+            </div>
+            <!-- Language Switcher Dropdown in Topbar -->
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary btn-sm dropdown-toggle lang-switcher-btn d-flex align-items-center gap-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-translate text-cyan"></i>
+                    <span class="current-lang-label">English</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow">
+                    <li><a class="dropdown-item lang-select-item" href="#" data-lang="en">🇬🇧 English</a></li>
+                    <li><a class="dropdown-item lang-select-item" href="#" data-lang="hi">🇮🇳 हिन्दी (Hindi)</a></li>
+                </ul>
             </div>
         </div>
 
@@ -162,49 +173,71 @@
             <!-- ══ RESULTS ══ -->
             <div id="analysisResults" style="display:none">
 
+                <!-- ATS Heuristic Disclaimer Banner -->
+                <div class="alert alert-info border-0 d-flex align-items-start gap-3 mb-4" id="aAtsDisclaimerBanner" style="background: rgba(34, 211, 238, 0.08); border-left: 3px solid #22d3ee !important;">
+                    <i class="bi bi-info-circle-fill text-cyan fs-5 mt-1"></i>
+                    <div>
+                        <strong class="text-white">Realistic ATS Compatibility Estimation:</strong>
+                        <div class="text-secondary small mt-1" id="aAtsDisclaimerText">
+                            ResumeIQ evaluates resumes using simulated parsing and a balanced 6-category weighted algorithm. Actual corporate ATS systems (Workday, Taleo, Greenhouse) vary by employer criteria. Scores never guarantee proprietary ATS acceptance and reflect realistic standards.
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Score Cards -->
                 <div class="results-header mb-4">
                     <h5 class="text-white mb-1" id="resumeOwnerName">Analysis Results</h5>
-                    <p class="text-secondary small">AI-powered resume quality assessment</p>
+                    <p class="text-secondary small">AI-powered resume quality assessment with balanced 6-category evaluation</p>
                 </div>
 
+                <!-- 6 Category Weighted Scoring Breakdown -->
                 <div class="row g-3 mb-4">
                     <div class="col-6 col-lg-2">
                         <div class="score-mini-card" style="--c:#6366f1">
-                            <div class="score-mini-label">Overall</div>
-                            <div class="score-mini-val" id="r-overall">—</div>
+                            <div class="score-mini-label">Skills & Keywords (25%)</div>
+                            <div class="score-mini-val" id="r-cat-skills">—</div>
                         </div>
                     </div>
                     <div class="col-6 col-lg-2">
                         <div class="score-mini-card" style="--c:#8b5cf6">
-                            <div class="score-mini-label">Skills</div>
-                            <div class="score-mini-val" id="r-skills">—</div>
+                            <div class="score-mini-label">Experience (20%)</div>
+                            <div class="score-mini-val" id="r-cat-exp">—</div>
                         </div>
                     </div>
                     <div class="col-6 col-lg-2">
                         <div class="score-mini-card" style="--c:#06b6d4">
-                            <div class="score-mini-label">Experience</div>
-                            <div class="score-mini-val" id="r-exp">—</div>
+                            <div class="score-mini-label">Formatting (20%)</div>
+                            <div class="score-mini-val" id="r-cat-fmt">—</div>
                         </div>
                     </div>
                     <div class="col-6 col-lg-2">
                         <div class="score-mini-card" style="--c:#10b981">
-                            <div class="score-mini-label">Keywords</div>
-                            <div class="score-mini-val" id="r-kw">—</div>
+                            <div class="score-mini-label">Education (15%)</div>
+                            <div class="score-mini-val" id="r-cat-edu">—</div>
                         </div>
                     </div>
                     <div class="col-6 col-lg-2">
                         <div class="score-mini-card" style="--c:#f59e0b">
-                            <div class="score-mini-label">ATS</div>
-                            <div class="score-mini-val" id="r-ats">—</div>
+                            <div class="score-mini-label">ATS Parsing (15%)</div>
+                            <div class="score-mini-val" id="r-cat-ats">—</div>
                         </div>
                     </div>
                     <div class="col-6 col-lg-2">
-                        <div class="score-mini-card" style="--c:#ef4444">
-                            <div class="score-mini-label">Formatting</div>
-                            <div class="score-mini-val" id="r-fmt">—</div>
+                        <div class="score-mini-card" style="--c:#ec4899">
+                            <div class="score-mini-label">Contact (5%)</div>
+                            <div class="score-mini-val" id="r-cat-contact">—</div>
                         </div>
                     </div>
+                </div>
+
+                <!-- Legacy score mini card holders for compatibility -->
+                <div style="display:none;">
+                    <span id="r-overall"></span>
+                    <span id="r-skills"></span>
+                    <span id="r-exp"></span>
+                    <span id="r-kw"></span>
+                    <span id="r-ats"></span>
+                    <span id="r-fmt"></span>
                 </div>
 
                 <div class="row g-4 mb-4">
@@ -254,6 +287,37 @@
                         <div class="list-card orange-border">
                             <h6 class="mb-3"><i class="bi bi-lightbulb-fill text-warning me-2"></i>Recommendations</h6>
                             <ul class="insight-list" id="aRecs"></ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Deductions & Improvement Insights Card -->
+                <div class="list-card mb-4" id="aDeductionsCard" style="border-left: 3px solid #f59e0b;">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h6 class="mb-0 text-white">
+                            <i class="bi bi-shield-exclamation text-warning me-2"></i>Scoring Deductions & Improvement Insights
+                        </h6>
+                        <span class="badge bg-warning text-dark small" id="aDeductionCountBadge">Evaluated</span>
+                    </div>
+                    <p class="text-secondary small mb-3">
+                        Transparent breakdown of why points were subtracted during parsing and formatting evaluation, along with actionable adjustments.
+                    </p>
+                    <div class="row g-3">
+                        <div class="col-lg-6">
+                            <div class="p-3 rounded" style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.05);">
+                                <h6 class="small text-danger mb-2"><i class="bi bi-dash-circle me-1"></i>Applied Deductions</h6>
+                                <ul class="insight-list mb-0" id="aDeductionsList">
+                                    <li class="text-secondary small">No deductions applied. Resume meets all baseline criteria.</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="p-3 rounded" style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.05);">
+                                <h6 class="small text-cyan mb-2"><i class="bi bi-arrow-up-circle me-1"></i>Key Improvement Actions</h6>
+                                <ul class="insight-list mb-0" id="aSuggestionsList">
+                                    <li class="text-secondary small">Maintain current format and continue adding quantifiable achievements.</li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
                 </div>

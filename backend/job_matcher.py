@@ -222,47 +222,61 @@ def generate_match_recommendations(score: float, missing_req: set, missing_pref:
 
 
 def compare_multiple_jobs(resume_text: str, job_roles: List[str] = None,
-                          custom_roles: List[Dict[str, str]] = None) -> List[Dict[str, Any]]:
+                          custom_roles: List[Dict[str, str]] = None,
+                          jobs: List[Dict[str, str]] = None) -> List[Dict[str, Any]]:
     """
-    Compare resume against multiple job profiles and optional custom roles.
-    Returns ranked comparison results.
+    Compare resume against at least two real job descriptions.
+    Requires at least 2 valid job profiles / descriptions.
+    Never fabricates results from empty inputs.
     """
-    if not job_roles:
-        job_roles = ['Software Developer', 'Web Developer', 'Data Analyst', 'Machine Learning Engineer', 'QA Engineer']
-
     results = []
-    for role in job_roles:
-        profile = ROLE_PROFILES.get(role)
-        if not profile:
-            continue
 
-        synthetic_jd = ' '.join(profile['required'] + profile['preferred'] + profile['soft'])
-        match = match_resume_to_job(resume_text, synthetic_jd, role)
+    # 1. If explicit jobs list provided
+    candidate_jobs = []
+    if jobs:
+        for j in jobs:
+            title = j.get('title', '').strip()
+            desc = j.get('description', '').strip()
+            if title and desc and len(desc) >= 15:
+                candidate_jobs.append({'title': title, 'description': desc})
+
+    # 2. If custom_roles provided
+    if custom_roles:
+        for cr in custom_roles:
+            title = cr.get('title', '').strip()
+            desc = cr.get('description', '').strip()
+            if title and desc and len(desc) >= 15:
+                candidate_jobs.append({'title': title, 'description': desc})
+
+    # 3. Preset roles fallback when jobs list is not explicitly provided
+    if not jobs and not job_roles:
+        job_roles = list(ROLE_PROFILES.keys())
+
+    if job_roles:
+        for role in job_roles:
+            profile = ROLE_PROFILES.get(role)
+            if profile:
+                desc = ' '.join(profile['required'] + profile['preferred'] + profile['soft'])
+                candidate_jobs.append({'title': role, 'description': desc})
+
+    # Strict validation: Require at least 2 valid job descriptions to compare
+    if len(candidate_jobs) < 2:
+        raise ValueError("Please provide at least two valid job descriptions for comparison.")
+
+    # Compare each valid job description against the resume
+    for c_job in candidate_jobs:
+        title = c_job['title']
+        desc = c_job['description']
+        match = match_resume_to_job(resume_text, desc, title)
         results.append({
-            'role': role,
+            'role': title,
             'match_percentage': match['overall_match'],
             'matched_skills': match['matched_skills'][:8],
             'missing_skills': match['missing_skills'][:6],
             'skills_match': match['skills_match'],
             'top_recommendation': match['recommendations'][0] if match['recommendations'] else '',
+            'is_custom': True
         })
-
-    # Add custom roles if provided
-    if custom_roles:
-        for cr in custom_roles:
-            c_title = cr.get('title', 'Custom Role')
-            c_desc = cr.get('description', '')
-            if c_desc:
-                match = match_resume_to_job(resume_text, c_desc, c_title)
-                results.append({
-                    'role': c_title,
-                    'match_percentage': match['overall_match'],
-                    'matched_skills': match['matched_skills'][:8],
-                    'missing_skills': match['missing_skills'][:6],
-                    'skills_match': match['skills_match'],
-                    'top_recommendation': match['recommendations'][0] if match['recommendations'] else '',
-                    'is_custom': True
-                })
 
     # Sort by match percentage descending
     results.sort(key=lambda x: x['match_percentage'], reverse=True)

@@ -32,9 +32,20 @@
             <div class="d-flex align-items-center gap-3">
                 <button class="btn btn-icon" id="sidebarToggle"><i class="bi bi-list"></i></button>
                 <div>
-                    <h4 class="mb-0 fw-700">Smart Job Match</h4>
-                    <p class="mb-0 text-secondary small">Paste a job description to get your compatibility score</p>
+                    <h4 class="mb-0 fw-700" data-i18n="jm_header">Smart Job Match</h4>
+                    <p class="mb-0 text-secondary small" data-i18n="jm_subheader">Paste a job description to get your compatibility score</p>
                 </div>
+            </div>
+            <!-- Language Switcher Dropdown in Topbar -->
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary btn-sm dropdown-toggle lang-switcher-btn d-flex align-items-center gap-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-translate text-cyan"></i>
+                    <span class="current-lang-label">English</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow">
+                    <li><a class="dropdown-item lang-select-item" href="#" data-lang="en">🇬🇧 English</a></li>
+                    <li><a class="dropdown-item lang-select-item" href="#" data-lang="hi">🇮🇳 हिन्दी (Hindi)</a></li>
+                </ul>
             </div>
         </div>
 
@@ -146,6 +157,17 @@
             <div id="matchLoading" class="text-center py-4" style="display:none">
                 <div class="analysis-loading-ring"></div>
                 <p class="mt-3 text-secondary">Analyzing job compatibility...</p>
+            </div>
+
+            <!-- Empty State when no JD has been evaluated -->
+            <div id="jmEmptyState" class="list-card text-center py-5 mb-4">
+                <div class="mb-3">
+                    <i class="bi bi-file-earmark-text text-cyan display-5"></i>
+                </div>
+                <h5 class="text-white fw-700" data-i18n="jm_empty_title">No Job Description Provided</h5>
+                <p class="text-secondary small mx-auto" style="max-width: 520px;" data-i18n="jm_empty_desc">
+                    Please upload or paste a job description above to access this feature and calculate your genuine compatibility score. Results are never fabricated from empty inputs.
+                </p>
             </div>
 
             <!-- Results -->

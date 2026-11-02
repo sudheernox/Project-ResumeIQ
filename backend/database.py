@@ -231,6 +231,9 @@ class ResumeAnalysis(db.Model):
             'ats_issues': self.get_ats_issues(),
             'keywords_found': self.get_keywords_found(),
             'ai_insights': self.get_ai_insights(),
+            'category_scores': self.get_ai_insights().get('category_scores', {}),
+            'deductions_summary': self.get_ai_insights().get('deductions_summary', []),
+            'ats_disclaimer': self.get_ai_insights().get('ats_disclaimer', 'ATS Compatibility Estimate: This evaluation is an algorithmic estimate modeled on leading applicant tracking systems. Proprietary employer ATS configurations vary.'),
             'total_skills': len(self.get_technical_skills()) + len(self.get_soft_skills())
         }
 
