@@ -6,7 +6,9 @@ import os
 import uuid
 import json
 import re
+import time
 import traceback
+from collections import defaultdict
 from datetime import datetime
 from functools import wraps
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for
@@ -16,8 +18,9 @@ from flask_cors import CORS
 from config import Config
 from backend.database import (
     db, User, ResumeUpload, ResumeAnalysis, JobMatch, SkillGap,
-    LearningRoadmap, RoadmapProgress, JobComparison
+    LearningRoadmap, RoadmapProgress, JobComparison, PasswordResetToken
 )
+from backend.email_service import send_password_reset_email, is_smtp_configured
 from backend.resume_parser import parse_resume
 from backend.resume_analyzer import analyze_resume
 from backend.job_matcher import match_resume_to_job, compare_multiple_jobs, ROLE_PROFILES
@@ -153,6 +156,21 @@ def login_required(f):
     return decorated_function
 
 
+# Rate limiting state for sensitive auth endpoints (sliding window)
+_reset_rate_limits = defaultdict(list)
+
+
+def is_rate_limited(key, limit=5, window_seconds=900):
+    """Sliding-window rate limiter: allows up to `limit` requests per `window_seconds`."""
+    now = time.time()
+    valid_window = [t for t in _reset_rate_limits[key] if now - t < window_seconds]
+    if len(valid_window) >= limit:
+        return True
+    valid_window.append(now)
+    _reset_rate_limits[key] = valid_window
+    return False
+
+
 def allowed_file(filename):
     return (
         '.' in filename and
@@ -255,7 +273,13 @@ def forgot_password_page():
 
 @app.route('/reset-password/<token>')
 def reset_password_page(token):
-    return render_template('reset_password.html', token=token)
+    user, error = User.verify_reset_token(token)
+    return render_template(
+        'reset_password.html',
+        token=token,
+        is_valid=(user is not None),
+        error_message=error
+    )
 
 
 @app.route('/profile')
@@ -464,35 +488,61 @@ def auth_me():
 
 @app.route('/api/auth/forgot-password', methods=['POST'])
 def auth_forgot_password():
-    """Generate a secure, time-limited reset token for password recovery."""
+    """Generate a secure, single-use reset token and send reset link."""
     data = request.get_json() or {}
     email = data.get('email', '').strip().lower()
 
     if not email:
         return jsonify({'error': 'Email address is required.'}), 400
 
+    # Rate limiting per IP and email to protect against abuse
+    client_ip = request.remote_addr or 'unknown'
+    if is_rate_limited(f"ip:{client_ip}", limit=10, window_seconds=900) or is_rate_limited(f"email:{email}", limit=5, window_seconds=900):
+        return jsonify({'error': 'Too many password reset requests. Please wait a few minutes before trying again.'}), 429
+
+    generic_message = 'If an account is associated with this email address, a password reset link has been sent.'
+
     user = User.query.filter(User.email.ilike(email)).first()
     if not user:
-        return jsonify({'error': 'No account found with this email address.'}), 404
-
-    try:
-        token = user.get_reset_token(app.config['SECRET_KEY'], expires_sec=3600)
-        reset_url = url_for('reset_password_page', token=token, _external=True)
-
+        # Prevent email enumeration: return same generic response
         return jsonify({
             'success': True,
-            'message': 'Password reset link generated successfully.',
-            'token': token,
-            'reset_url': reset_url
+            'message': generic_message
         })
+
+    try:
+        # Create single-use token (stores only SHA-256 hash in DB)
+        token = user.create_reset_token(expires_hours=1)
+        reset_url = url_for('reset_password_page', token=token, _external=True)
+
+        email_status = send_password_reset_email(user.email, reset_url)
+
+        response_payload = {
+            'success': True,
+            'message': generic_message
+        }
+
+        if not email_status.get('configured'):
+            response_payload['notice'] = (
+                'Note: SMTP credentials are not yet configured in your environment (.env). '
+                'In production, configure SMTP_SERVER, SMTP_PORT, SMTP_USERNAME, and SMTP_PASSWORD.'
+            )
+            # When SMTP is unconfigured or in development/testing, supply dev link for smooth local testing
+            if app.debug or app.config.get('TESTING') or app.config.get('ENV') == 'development' or not email_status.get('configured'):
+                response_payload['dev_reset_url'] = reset_url
+                if app.config.get('TESTING') or app.debug:
+                    response_payload['token'] = token
+
+        return jsonify(response_payload)
     except Exception as e:
+        db.session.rollback()
         traceback.print_exc()
-        return jsonify({'error': f'Failed to generate reset link: {str(e)}'}), 500
+        return jsonify({'error': f'Failed to process password reset request: {str(e)}'}), 500
 
 
 @app.route('/api/auth/reset-password', methods=['POST'])
 def auth_reset_password():
-    """Verify reset token and update user password."""
+    """Verify single-use reset token and update user password."""
     data = request.get_json() or {}
     token = data.get('token', '')
     password = data.get('password', '')
@@ -501,9 +551,9 @@ def auth_reset_password():
     if not token:
         return jsonify({'error': 'Reset token is missing.'}), 400
 
-    user = User.verify_reset_token(token, app.config['SECRET_KEY'], max_age=3600)
+    user, error_msg = User.verify_reset_token(token)
     if not user:
-        return jsonify({'error': 'Invalid or expired password reset link. Please request a new one.'}), 400
+        return jsonify({'error': error_msg or 'Invalid or expired password reset link. Please request a new one.'}), 400
 
     if not password or len(password) < 8:
         return jsonify({'error': 'Password must be at least 8 characters long.'}), 400
@@ -513,11 +563,13 @@ def auth_reset_password():
 
     try:
         user.set_password(password)
+        # Invalidate token immediately to prevent token reuse
+        User.consume_reset_token(token)
         db.session.commit()
 
         return jsonify({
             'success': True,
-            'message': 'Password has been reset successfully. Please log in.',
+            'message': 'Password has been reset successfully. Please log in with your new password.',
             'redirect': '/login'
         })
     except Exception as e:

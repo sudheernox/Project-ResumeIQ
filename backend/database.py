@@ -2,8 +2,10 @@
 Database models for ResumeIQ
 """
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
+import secrets
+import hashlib
 from werkzeug.security import generate_password_hash, check_password_hash
 
 db = SQLAlchemy()
@@ -26,6 +28,7 @@ class User(db.Model):
     skill_gaps = db.relationship('SkillGap', backref='user', lazy=True, cascade='all, delete-orphan')
     roadmaps = db.relationship('LearningRoadmap', backref='user', lazy=True, cascade='all, delete-orphan')
     comparisons = db.relationship('JobComparison', backref='user', lazy=True, cascade='all, delete-orphan')
+    reset_tokens = db.relationship('PasswordResetToken', backref='user', lazy=True, cascade='all, delete-orphan')
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -33,20 +36,53 @@ class User(db.Model):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
-    def get_reset_token(self, secret_key, expires_sec=3600):
-        from itsdangerous import URLSafeTimedSerializer
-        s = URLSafeTimedSerializer(secret_key)
-        return s.dumps({'user_id': self.id}, salt='password-reset-salt')
+    def create_reset_token(self, expires_hours=1):
+        """Generate a random single-use token, store its SHA-256 hash, and return the raw token."""
+        token = secrets.token_urlsafe(32)
+        token_hash = hashlib.sha256(token.encode('utf-8')).hexdigest()
+        expires_at = datetime.utcnow() + timedelta(hours=expires_hours)
+        
+        # Save reset token record
+        reset_record = PasswordResetToken(
+            user_id=self.id,
+            token_hash=token_hash,
+            expires_at=expires_at,
+            is_used=False
+        )
+        db.session.add(reset_record)
+        db.session.commit()
+        return token
 
     @staticmethod
-    def verify_reset_token(token, secret_key, max_age=3600):
-        from itsdangerous import URLSafeTimedSerializer
-        s = URLSafeTimedSerializer(secret_key)
-        try:
-            data = s.loads(token, salt='password-reset-salt', max_age=max_age)
-        except Exception:
-            return None
-        return User.query.get(data.get('user_id'))
+    def verify_reset_token(token):
+        """Verify token hash existence, expiry, and single-use status."""
+        if not token:
+            return None, 'Password reset token is missing.'
+        token_hash = hashlib.sha256(token.encode('utf-8')).hexdigest()
+        record = PasswordResetToken.query.filter_by(token_hash=token_hash).first()
+        if not record:
+            return None, 'Invalid or expired password reset link. Please request a new one.'
+        if record.is_used:
+            return None, 'This password reset link has already been used. Please request a new one.'
+        if datetime.utcnow() > record.expires_at:
+            return None, 'This password reset link has expired. Please request a new one.'
+        user = User.query.get(record.user_id)
+        if not user:
+            return None, 'User associated with this token no longer exists.'
+        return user, None
+
+    @staticmethod
+    def consume_reset_token(token):
+        """Mark reset token as used to strictly prevent token reuse."""
+        if not token:
+            return False
+        token_hash = hashlib.sha256(token.encode('utf-8')).hexdigest()
+        record = PasswordResetToken.query.filter_by(token_hash=token_hash).first()
+        if record:
+            record.is_used = True
+            db.session.commit()
+            return True
+        return False
 
     def to_dict(self):
         return {
@@ -56,6 +92,17 @@ class User(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
+
+
+class PasswordResetToken(db.Model):
+    __tablename__ = 'password_reset_tokens'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    token_hash = db.Column(db.String(64), nullable=False, index=True)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    is_used = db.Column(db.Boolean, default=False, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 class ResumeUpload(db.Model):
